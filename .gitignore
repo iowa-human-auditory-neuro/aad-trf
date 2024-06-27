@@ -1,12 +1,15 @@
 # Ignore files inside the data folder
-/data/features/*
+/data/features/*.fif
+/data/features/*.npy
+/data/features/*.pkl
 /data/updown/*
 
 # Ignore files inside the models folder
-/models/*
+/models/*.pkl
 
 # Ignore files inside the reports folder
-/reports/*
+/reports/*.csv
+/reports/*.png
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
