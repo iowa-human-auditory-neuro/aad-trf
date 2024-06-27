@@ -47,7 +47,7 @@ Configuration should be saved in the `src/config` folder as `.json` format.  Con
 
 
 ## Folder Sturcture
-
+```
 |-- data
 |   |-- [raw_dataset]
 |   |-- features
@@ -58,6 +58,7 @@ Configuration should be saved in the `src/config` folder as `.json` format.  Con
 |-- src
 |   |-- aad_trf
 |   |-- config
+```
 
 ## File naming conventions
 
