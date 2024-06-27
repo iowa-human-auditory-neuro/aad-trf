@@ -29,7 +29,7 @@ def select_channels(data:np.ndarray,
     
 
 def plot_audio_waveform(dataset:AAD_Dataset):
-    audio = dataset.get_audio().squeeze()
+    audio = dataset.get_attended_audio().squeeze()
     audio_up = audio[dataset.labels == 0].mean(axis=0).T
     audio_down = audio[dataset.labels == 1].mean(axis=0).T
     times = dataset.get_times()

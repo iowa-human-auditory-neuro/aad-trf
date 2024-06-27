@@ -28,9 +28,9 @@ class TRF:
         
     def _get_input_output(self, dataset:AAD_Dataset):
         if self.direction == 'forward':
-            input_data, output_data = dataset.get_audio(moveaxis=True), dataset.get_eeg(moveaxis=True)
+            input_data, output_data = dataset.get_attended_audio(moveaxis=True), dataset.get_eeg(moveaxis=True)
         elif self.direction == 'backward':
-            input_data, output_data = dataset.get_eeg(moveaxis=True), dataset.get_audio(moveaxis=True)
+            input_data, output_data = dataset.get_eeg(moveaxis=True), dataset.get_attended_audio(moveaxis=True)
         else: 
             raise ValueError(f"Invalid direction {self.direction}")
         

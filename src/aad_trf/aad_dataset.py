@@ -47,7 +47,7 @@ class AAD_Dataset:
                ):
         self.eeg = eeg_epochs.get_data()
         self._event_ids = eeg_epochs.events[:,2]
-        self.audio = self.attended_audio(audio)
+        self.audio = self.make_audio_array(audio)
         self.sfreq = eeg_epochs.info['sfreq']
         self.eeg_channels = eeg_epochs.ch_names
         self.eeg_info = eeg_epochs.info
@@ -62,8 +62,23 @@ class AAD_Dataset:
         self.audio = self.z_score_normalize(self.audio)
         self.features = self.z_score_normalize(self.features)
 
-    def attended_audio(self, audio):
-        return np.array([audio[self.event2audio_codebook[event-1]][1 - event % 2] for event in self._event_ids])
+    def make_audio_array(self, audio):
+        return np.array([audio[self.event2audio_codebook[event-1]] for event in self._event_ids])
+
+    def get_attended_audio(self,
+                           moveaxis=False,
+                           normalize=False
+                           ):
+        attended_audio = []
+        for trial in range(len(self)):
+            attended_audio.append(self.audio[trial, [self.labels[trial]],:])
+        attended_audio = np.array(attended_audio)
+        if moveaxis:
+            attended_audio = np.moveaxis(audio, -1, 0)
+        if normalize:
+            attended_audio = self.z_score_normalize(audio)
+
+        return attended_audio
     
     def get_times(self, start_time:float=0.5):
         return (np.arange(self.audio.shape[-1]) / self.sfreq) + start_time
@@ -138,7 +153,7 @@ if __name__ == '__main__':
 
     # Test the AAD_Dataset class
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config_id", type=str, default="nh", help="Configuration ID")
+    parser.add_argument("--config_id", type=str, default="dataset-updown-nh_exp-1", help="Configuration ID")
     args = parser.parse_args()
     config_id = args.config_id
 
@@ -146,8 +161,8 @@ if __name__ == '__main__':
     config = load_config(config_id)
     path_dict = set_paths_from_config(base_path, config)
 
-    audio = np.load(os.path.join(path_dict['features'], f"{config_id}_audio.npy"))
-    epochs = mne.read_epochs(os.path.join(path_dict['features'], f"{config_id}-epo.fif"))
+    audio = np.load(os.path.join(path_dict['features'], f"{config_id}_data-audio.npy"))
+    epochs = mne.read_epochs(os.path.join(path_dict['features'], f"{config_id}_data-eeg-epo.fif"))
     dataset = AAD_Dataset()
     dataset.create(epochs, audio)
 
@@ -165,6 +180,8 @@ if __name__ == '__main__':
           dataset_sub.eeg_channels,
           dataset_sub.features.shape
           )
+    attended_audio = dataset.get_attended_audio()
+    print(attended_audio.shape)
     ax_audio = plot_audio_waveform(dataset)
     ax_eeg = plot_eeg_waveform(dataset)
     pass
