@@ -15,7 +15,7 @@ class EEG_Preprocessor:
         epochs_list = []
         remove_bads = "n"
         for file in files:
-            sub_id = file.split("/")[-1].split("_")[0].split("-")[1]
+            sub_id = file.split("/")[-1].split("_")[0].split("-")[0]
             assert len(sub_id) == 6, f"Invalid subID: {sub_id}"
             epochs = read_epochs(file)
             if epochs.info["bads"]:
@@ -26,8 +26,10 @@ class EEG_Preprocessor:
                 elif remove_bads != "n":
                     raise ValueError("Invalid input")
 
-            if epochs.metadata is None or "sub_id" not in epochs.metadata.columns:
+            if epochs.metadata is None:
                 epochs.metadata = pd.DataFrame({"sub_id": [sub_id]*len(epochs)})
+            elif "sub_id" not in epochs.metadata.columns:
+                epochs.metadata["sub_id"] = [sub_id]*len(epochs)
             epochs_list.append(epochs)
 
         return concatenate_epochs(epochs_list)
