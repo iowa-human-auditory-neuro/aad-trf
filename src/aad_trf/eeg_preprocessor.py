@@ -4,6 +4,8 @@ import pandas as pd
 from mne import Epochs, read_epochs, concatenate_epochs
 from math import ceil
 
+from utils import get_field_from_filename
+
 class EEG_Preprocessor:
     def __init__(self, config):
         self.config = config
@@ -11,11 +13,12 @@ class EEG_Preprocessor:
         self.preprocessed = False
 
     def load_epochs(self, epochs_path) -> Epochs:
-        files = sorted(glob.glob(f"{epochs_path}/*-epo.fif"))
+        files = sorted(glob.glob(f"{epochs_path}/*epo.fif"))
         epochs_list = []
         remove_bads = "n"
         for file in files:
-            sub_id = file.split("/")[-1].split("_")[0].split("-")[0]
+            filename = file.split("/")[-1]
+            sub_id = get_field_from_filename(filename, "sub")
             assert len(sub_id) == 6, f"Invalid subID: {sub_id}"
             epochs = read_epochs(file)
             if epochs.info["bads"]:

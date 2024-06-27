@@ -32,17 +32,12 @@ def set_paths_from_config(base_path:str, config:dict) -> dict:
         "models": models_path
     }
 
-def get_field_from_filename(filename:str, target_field:str) -> str:
+def get_field_from_filename(filename: str, target_field: str) -> str:
     fields = filename.split("_")
     for field in fields:
         field_parts = field.split("-")
         field_name = field_parts.pop(0)
         if field_name == target_field:
-            field_value = "-".join(field_parts)
-        else:
-            field_value = None
-    
-    if field_value is None:
-        raise ValueError(f"Field {field} not found in filename {filename}")
-    else:
-        return field_value
+            return "-".join(field_parts)
+
+    raise ValueError(f"Field {target_field} not found in filename {filename}")
