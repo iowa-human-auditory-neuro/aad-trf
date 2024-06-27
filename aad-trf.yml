@@ -1,0 +1,8 @@
+name: aad-trf
+channels:
+  - defaults
+dependencies:
+  - mne
+  - seaborn
+  - tqdm
+prefix: /Users/jusungham/miniconda3/envs/aad-trf

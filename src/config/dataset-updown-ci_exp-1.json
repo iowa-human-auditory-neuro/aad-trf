@@ -1,0 +1,25 @@
+{
+  "dataset": "updown",
+  "audio_preprocessing": {
+    "crop_time": [0.5, null],
+    "downsfreq": 64
+  },
+  "eeg_preprocessing": {
+    "rereferencing": "mastoids",
+    "baseline": [-0.4, -0.1],
+    "cutoff_freq": [1.0, 15.0],
+    "crop_time": [1, 4.5],
+    "downsfreq": 64
+  },
+  "normalize": "True",
+  "trf":{
+    "direction": "forward",
+    "delays": [0,0.4],
+    "search_space": [-2, 9, 12],
+    "n_folds": 10,
+    "scoring": "corrcoef"
+  },
+  "classifiers": {
+    "model_name": "LogisticRegression"
+  }
+}
