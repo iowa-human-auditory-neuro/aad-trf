@@ -61,3 +61,13 @@ for train_index, test_index in cv.split(dataset.labels, groups=groups):
                         save=True,
                         save_path=os.path.join(path_dict['reports'], f"{save_filename}.png")
                         )
+
+# Grand Average EEG - TRF prediction
+trf = trf.load(os.path.join(path_dict['models'], f"{config_id}_models-trf_sub-{test_sub_id}.pkl"))
+save_filename = f"{config_id}_reports-grand-trf-{type}_sub-{test_sub_id}_ch-{plot_channels_str}"
+ax = trf.plot(type='prediction', 
+                dataset=dataset,
+                plot_channels=plot_channels,
+                save=True,
+                save_path=os.path.join(path_dict['reports'], f"{save_filename}.png")
+                )
