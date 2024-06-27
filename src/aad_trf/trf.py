@@ -1,4 +1,5 @@
 import numpy as np
+import os
 import pandas as pd
 import pickle as pkl
 import matplotlib.pyplot as plt
@@ -107,6 +108,18 @@ class TRF:
         input_data, output_data = self._get_input_output(dataset)
         predicted_output = self.model.predict(input_data)
         return self.pearson_corr_3d(predicted_output, output_data, axis=0)
+
+    def eval_external_audio(self, dataset:AAD_Dataset, audio):
+        print(f"Evaluating TRF on {len(dataset)} trials...")
+        _, output_data = self._get_input_output(dataset)
+        
+        scores = []
+        for trial in tqdm(range(output_data.shape[1])):
+            up_score = self.model.score(audio[0, :, np.newaxis], output_data[:,trial,:])
+            down_score = self.model.score(audio[1, :, np.newaxis], output_data[:,trial,:])
+            scores.append([up_score, down_score])
+        final_score = np.stack(scores, axis=0) # (trials, up/down, channels)
+        return final_score.reshape(final_score.shape[0], -1)
     
     def predict(self, dataset:AAD_Dataset):
         input_data, output_data = self._get_input_output(dataset)
@@ -118,8 +131,9 @@ class TRF:
     def get_delays_in_sec(self):
         return self.model.delays_ / float(self.model.sfreq)
     
-    def parse_scores_as_features(self, dataset:AAD_Dataset):
-        dataset.features = self.eval(dataset)
+    def parse_scores_as_features(self, dataset:AAD_Dataset, audio):
+        # dataset.features = self.eval(dataset)
+        dataset.features = self.eval_external_audio(dataset, audio)        
         return dataset
 
     def save(self, path:str):

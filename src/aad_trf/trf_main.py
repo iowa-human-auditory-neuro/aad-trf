@@ -23,6 +23,7 @@ epochs = mne.read_epochs(os.path.join(path_dict['features'], f"{config_id}_data-
 dataset = AAD_Dataset()
 dataset.create(epochs, audio)
 dataset.normalize() if config['normalize'] else None
+up_down_audio = audio[0, :, :]
 del audio, epochs
 
 cv = LeaveOneGroupOut()
@@ -47,7 +48,7 @@ for train_index, test_index in cv.split(dataset.labels, groups=groups):
                                 )
     trf.train(train_dataset)
     trf.save(os.path.join(path_dict['models'], f"{config_id}_models-trf_sub-{test_sub_id}.pkl"))
-    dataset = trf.parse_scores_as_features(dataset)
+    dataset = trf.parse_scores_as_features(dataset, up_down_audio)
     dataset.save(os.path.join(path_dict['features'], f"{config_id}_data-aad-trfscores_sub-{test_sub_id}.pkl"))
     for type in ['coef', 'scores', 'hp-tuning', 'prediction']:
         print(f"Plotting {type}...")
