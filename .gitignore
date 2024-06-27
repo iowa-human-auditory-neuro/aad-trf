@@ -1,5 +1,6 @@
 # Ignore files inside the data folder
-/data/*
+/data/features/*
+/data/updown/*
 
 # Ignore files inside the models folder
 /models/*

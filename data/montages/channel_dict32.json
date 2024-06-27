@@ -1,0 +1,7 @@
+{
+    "fronatal": "['Fp1', 'Fp2', 'AF3', 'AF4', 'F7', 'F3', 'F8', 'Fz', 'F4']",
+    "central": "['FC1', 'FC5', 'C3', 'C4', 'FC6', 'FC2', 'Cz']",
+    "parietal": "['CP1', 'CP5', 'CP2', 'P3', 'P4', 'P7', 'P8', 'Pz', 'CP6']",
+    "temporal": "['T7', 'T8']",
+    "occipital": "['PO3', 'O1', 'Oz', 'O2', 'PO4']"
+}
