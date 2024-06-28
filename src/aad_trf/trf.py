@@ -131,11 +131,11 @@ class TRF:
         input_data, output_data = self._get_input_output(dataset, attended=False)
         scores = np.zeros((len(dataset), 2, len(dataset.eeg_channels))) # (trials, up/down, channels)
         if self.direction == 'forward':
-            for trial in range(len(dataset)):
+            for trial in tqdm(range(len(dataset))):
                 scores[trial,0,:] = self.model.score(input_data[:,trial,[0]], output_data[:,trial,:])
                 scores[trial,1,:] = self.model.score(input_data[:,trial,[1]], output_data[:,trial,:])
         elif self.direction == 'backward':
-            for trial in range(len(dataset)):
+            for trial in tqdm(range(len(dataset))):
                 scores[trial,0,:] = self.model.score(input_data[:,trial,:], output_data[:,trial,[0]])
                 scores[trial,1,:] = self.model.score(input_data[:,trial,:], output_data[:,trial,[1]])
         dataset.features = scores.reshape(len(dataset), -1)
