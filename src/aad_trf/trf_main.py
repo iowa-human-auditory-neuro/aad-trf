@@ -23,6 +23,7 @@ epochs = mne.read_epochs(os.path.join(path_dict['features'], f"{config_id}_data-
 dataset = AAD_Dataset()
 dataset.create(epochs, audio)
 dataset.normalize() if config['normalize'] else None
+up_down_audio = audio[0, :, :]
 del audio, epochs
 
 cv = LeaveOneGroupOut()
@@ -47,7 +48,7 @@ for train_index, test_index in cv.split(dataset.labels, groups=groups):
                                 )
     trf.train(train_dataset)
     trf.save(os.path.join(path_dict['models'], f"{config_id}_models-trf_sub-{test_sub_id}.pkl"))
-    dataset = trf.parse_scores_as_features(dataset)
+    dataset = trf.parse_scores_as_features(dataset, up_down_audio)
     dataset.save(os.path.join(path_dict['features'], f"{config_id}_data-aad-trfscores_sub-{test_sub_id}.pkl"))
     for type in ['coef', 'scores', 'hp-tuning', 'prediction']:
         print(f"Plotting {type}...")
@@ -60,3 +61,13 @@ for train_index, test_index in cv.split(dataset.labels, groups=groups):
                         save=True,
                         save_path=os.path.join(path_dict['reports'], f"{save_filename}.png")
                         )
+
+# Grand Average EEG - TRF prediction
+trf = trf.load(os.path.join(path_dict['models'], f"{config_id}_models-trf_sub-{test_sub_id}.pkl"))
+save_filename = f"{config_id}_reports-grand-trf-{type}_sub-{test_sub_id}_ch-{plot_channels_str}"
+ax = trf.plot(type='prediction', 
+                dataset=dataset,
+                plot_channels=plot_channels,
+                save=True,
+                save_path=os.path.join(path_dict['reports'], f"{save_filename}.png")
+                )
