@@ -170,12 +170,26 @@ def plot_eeg_prediction(dataset:AAD_Dataset,
     return axs
 
 def plot_clf_results(clf_results:pd.DataFrame):
-    fig, ax = plt.subplots(figsize=(6,6))
-    ax = sns.stripplot(data=clf_results, x="classifier", y="accuracy_test", jitter=False, ax=ax)
-    ax = sns.boxplot(data=clf_results, x="classifier", y="accuracy_test", width=0.1, ax=ax)
+    fig, ax = plt.subplots(figsize=(6,8))
+    ax = sns.stripplot(data=clf_results, 
+                       x="classifier", 
+                       y="accuracy_test", 
+                       jitter=False, 
+                       color='k',
+                       marker='o',
+                       ax=ax
+                       )
+    ax = sns.boxplot(data=clf_results, 
+                     x="classifier", 
+                     y="accuracy_test", 
+                     width=0.1, 
+                     color='k',
+                     fill=False,
+                     ax=ax
+                     )
     ax.axhline(0.5, color='gray', linestyle='--')
     ax.grid(axis='y')
-    ax.set_ylim(0.4, 0.75)
+    ax.set_ylim(0.2, 0.8)
     ax.set_title("Classifier performance")
     ax.set_ylabel("Accuracy")
 
