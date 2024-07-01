@@ -1,12 +1,14 @@
 import os
 import argparse
 import numpy as np
+import matplotlib.pyplot as plt
 import mne
 from sklearn.model_selection import LeaveOneGroupOut
 
 from aad_dataset import AAD_Dataset
 from trf import TRF
 from utils import load_config, set_paths_from_config
+from aad_plotter import plot_eeg_prediction
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--config_id", type=str, default="dataset-updown-nh_exp-1", help="Configuration ID")
@@ -23,7 +25,6 @@ epochs = mne.read_epochs(os.path.join(path_dict['features'], f"{config_id}_data-
 dataset = AAD_Dataset()
 dataset.create(epochs, audio)
 dataset.normalize() if config['normalize'] else None
-up_down_audio = audio[0, :, :]
 del audio, epochs
 
 cv = LeaveOneGroupOut()
@@ -32,6 +33,7 @@ search_space = np.logspace(config_trf['search_space'][0],
                         config_trf['search_space'][1], 
                         config_trf['search_space'][2]
                         )
+eeg_prediction = []
 for train_index, test_index in cv.split(dataset.labels, groups=groups):
     train_dataset = dataset[train_index]
     test_dataset = dataset[test_index]
@@ -48,8 +50,11 @@ for train_index, test_index in cv.split(dataset.labels, groups=groups):
                                 )
     trf.train(train_dataset)
     trf.save(os.path.join(path_dict['models'], f"{config_id}_models-trf_sub-{test_sub_id}.pkl"))
-    dataset = trf.parse_scores_as_features(dataset, up_down_audio)
+    eeg_prediction.append(trf.predict(test_dataset))
+
+    dataset = trf.parse_scores_as_features(dataset)
     dataset.save(os.path.join(path_dict['features'], f"{config_id}_data-aad-trfscores_sub-{test_sub_id}.pkl"))
+
     for type in ['coef', 'scores', 'hp-tuning', 'prediction']:
         print(f"Plotting {type}...")
         plot_channels = ['FCz']
@@ -63,11 +68,12 @@ for train_index, test_index in cv.split(dataset.labels, groups=groups):
                         )
 
 # Grand Average EEG - TRF prediction
-trf = trf.load(os.path.join(path_dict['models'], f"{config_id}_models-trf_sub-{test_sub_id}.pkl"))
-save_filename = f"{config_id}_reports-grand-trf-{type}_sub-{test_sub_id}_ch-{plot_channels_str}"
-ax = trf.plot(type='prediction', 
-                dataset=dataset,
-                plot_channels=plot_channels,
-                save=True,
-                save_path=os.path.join(path_dict['reports'], f"{save_filename}.png")
-                )
+eeg_prediction = np.concatenate(eeg_prediction, axis=1)
+save_filename = f"{config_id}_reports-trf-prediction_sub-grand-average_ch-{plot_channels_str}"
+save_path = os.path.join(path_dict['reports'], f"{save_filename}.png")
+axs = plot_eeg_prediction(dataset,
+                          eeg_prediction,
+                          plot_channels=plot_channels,
+                          scaling_factor=1.5
+                          )
+plt.savefig(save_path)
