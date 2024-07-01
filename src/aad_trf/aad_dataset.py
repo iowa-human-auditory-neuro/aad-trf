@@ -65,18 +65,11 @@ class AAD_Dataset:
     def make_audio_array(self, audio):
         return np.array([audio[self.event2audio_codebook[event-1]] for event in self._event_ids])
 
-    def get_attended_audio(self,
-                           moveaxis=False,
-                           normalize=False
-                           ):
+    def _get_attended_audio(self):
         attended_audio = []
         for trial in range(len(self)):
             attended_audio.append(self.audio[trial, [self.labels[trial]],:])
         attended_audio = np.array(attended_audio)
-        if moveaxis:
-            attended_audio = np.moveaxis(audio, -1, 0)
-        if normalize:
-            attended_audio = self.z_score_normalize(audio)
 
         return attended_audio
     
@@ -84,10 +77,14 @@ class AAD_Dataset:
         return (np.arange(self.audio.shape[-1]) / self.sfreq) + start_time
     
     def get_audio(self, 
+                  attended=False,
                   moveaxis=False, 
                   normalize=False
                   ):
-        audio = self.audio
+        if attended:
+            audio = self._get_attended_audio()
+        else:
+            audio = self.audio
         if moveaxis:
             audio = np.moveaxis(audio, -1, 0)
         if normalize:

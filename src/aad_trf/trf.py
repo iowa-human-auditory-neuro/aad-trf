@@ -27,11 +27,13 @@ class TRF:
         self.scoring = scoring
         self.lambda_ = lambda_
         
-    def _get_input_output(self, dataset:AAD_Dataset):
+    def _get_input_output(self, dataset:AAD_Dataset, attended=True):
         if self.direction == 'forward':
-            input_data, output_data = dataset.get_attended_audio(moveaxis=True), dataset.get_eeg(moveaxis=True)
+            input_data = dataset.get_audio(moveaxis=True, attended=attended)
+            output_data = dataset.get_eeg(moveaxis=True)
         elif self.direction == 'backward':
-            input_data, output_data = dataset.get_eeg(moveaxis=True), dataset.get_attended_audio(moveaxis=True)
+            input_data = dataset.get_eeg(moveaxis=True)
+            output_data = dataset.get_attended_audio(moveaxis=True, attended=attended)
         else: 
             raise ValueError(f"Invalid direction {self.direction}")
         
@@ -125,17 +127,26 @@ class TRF:
         input_data, output_data = self._get_input_output(dataset)
         return self.model.predict(input_data)
     
+    def parse_scores_as_features(self, dataset:AAD_Dataset):
+        input_data, output_data = self._get_input_output(dataset, attended=False)
+        scores = np.zeros((len(dataset), 2, len(dataset.eeg_channels))) # (trials, up/down, channels)
+        if self.direction == 'forward':
+            for trial in tqdm(range(len(dataset))):
+                scores[trial,0,:] = self.model.score(input_data[:,trial,[0]], output_data[:,trial,:])
+                scores[trial,1,:] = self.model.score(input_data[:,trial,[1]], output_data[:,trial,:])
+        elif self.direction == 'backward':
+            for trial in tqdm(range(len(dataset))):
+                scores[trial,0,:] = self.model.score(input_data[:,trial,:], output_data[:,trial,[0]])
+                scores[trial,1,:] = self.model.score(input_data[:,trial,:], output_data[:,trial,[1]])
+        dataset.features = scores.reshape(len(dataset), -1)
+        return dataset
+    
     def get_model_coef(self):
         return self.model.coef_
     
     def get_delays_in_sec(self):
         return self.model.delays_ / float(self.model.sfreq)
     
-    def parse_scores_as_features(self, dataset:AAD_Dataset, audio):
-        # dataset.features = self.eval(dataset)
-        dataset.features = self.eval_external_audio(dataset, audio)        
-        return dataset
-
     def save(self, path:str):
         print(f"Saving TRF object to {path}")
         with open(path, "wb") as f:
@@ -200,66 +211,5 @@ class TRF:
         return np.sum(xm * ym, axis=axis) / (normxm * normym)
 
 if __name__ == '__main__':
-    import os
-    import argparse
-
-    from utils import load_config, set_paths_from_config
-
-    # Test the AAD_Dataset class
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--config_id", type=str, default="dataset-updown-nh_exp-1", help="Configuration ID")
-    args = parser.parse_args()
-    config_id = args.config_id
-
-    base_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    config = load_config(config_id)
-    config_trf = config['trf']
-    path_dict = set_paths_from_config(base_path, config)
-
-    audio = np.load(os.path.join(path_dict['features'], f"{config_id}_data-audio.npy"))
-    epochs = mne.read_epochs(os.path.join(path_dict['features'], f"{config_id}_data-eeg-epo.fif"))
-    dataset = AAD_Dataset()
-    dataset.create(epochs, audio)
-    dataset.normalize() if config['normalize'] else None
-    del audio, epochs
-
-    cv = LeaveOneGroupOut()
-    groups = dataset.sub_ids
-    search_space = np.logspace(config_trf['search_space'][0], 
-                            config_trf['search_space'][1], 
-                            config_trf['search_space'][2]
-                            )
-    for train_index, test_index in cv.split(dataset.labels, groups=groups):
-        train_dataset = dataset[train_index]
-        test_dataset = dataset[test_index]
-        test_sub_id = test_dataset.sub_ids[0]
-        print(f"Test subject: {test_sub_id}")
-
-        # trf = TRF(direction=config_trf['direction'], 
-        #           delays=tuple(config_trf['delays']), 
-        #           scoring=config_trf['scoring'], 
-        #           lambda_=1000
-        #           )
-        # # trf.optimize_hyperparmeters(train_dataset, 
-        # #                             search_space, 
-        # #                             n_folds=config_trf['n_folds']
-        # #                             )
-        # trf.train(train_dataset)
-        # trf.save(os.path.join(path_dict['models'], f"{config_id}_models-trf_sub-{test_sub_id}.pkl"))
-        trf = TRF.load(os.path.join(path_dict['models'], f"{config_id}_models-trf_sub-{test_sub_id}.pkl"))
-        # scores = trf.eval(test_dataset)
-        # dataset = trf.parse_scores_as_features(dataset)
-        # dataset.save(os.path.join(path_dict['features'], f"{config_id}_data-aad-trfscores_sub-{test_sub_id}.pkl"))
-        for type in ['coef', 'scores', 'hp-tuning', 'prediction']:
-            print(f"Plotting {type}...")
-            plot_channels = ['FCz']
-            plot_channels_str = "".join(plot_channels)
-            save_filename = f"{config_id}_reports-trf-{type}_sub-{test_sub_id}_ch-{plot_channels_str}"
-            ax = trf.plot(type=type, 
-                          dataset=test_dataset,
-                          plot_channels=plot_channels,
-                          save=True,
-                          save_path=os.path.join(path_dict['reports'], f"{save_filename}.png")
-                          )
-        break
+    pass
         

@@ -7,7 +7,6 @@ from mne.viz import plot_topomap
 
 from aad_dataset import AAD_Dataset
 
-
 def select_channels(data:np.ndarray,
                     plot_channels:list,
                     dataset:AAD_Dataset
@@ -26,10 +25,9 @@ def select_channels(data:np.ndarray,
         raise ValueError(f"Invalid channel name {plot_channels}")
     
     return data
-    
 
 def plot_audio_waveform(dataset:AAD_Dataset):
-    audio = dataset.get_attended_audio().squeeze()
+    audio = dataset.get_audio(attended=True).squeeze()
     audio_up = audio[dataset.labels == 0].mean(axis=0).T
     audio_down = audio[dataset.labels == 1].mean(axis=0).T
     times = dataset.get_times()
@@ -172,12 +170,26 @@ def plot_eeg_prediction(dataset:AAD_Dataset,
     return axs
 
 def plot_clf_results(clf_results:pd.DataFrame):
-    fig, ax = plt.subplots(figsize=(6,6))
-    ax = sns.stripplot(data=clf_results, x="classifier", y="accuracy_test", jitter=False, ax=ax)
-    ax = sns.boxplot(data=clf_results, x="classifier", y="accuracy_test", width=0.1, ax=ax)
+    fig, ax = plt.subplots(figsize=(6,8))
+    ax = sns.stripplot(data=clf_results, 
+                       x="classifier", 
+                       y="accuracy_test", 
+                       jitter=False, 
+                       color='k',
+                       marker='o',
+                       ax=ax
+                       )
+    ax = sns.boxplot(data=clf_results, 
+                     x="classifier", 
+                     y="accuracy_test", 
+                     width=0.1, 
+                     color='k',
+                     fill=False,
+                     ax=ax
+                     )
     ax.axhline(0.5, color='gray', linestyle='--')
     ax.grid(axis='y')
-    ax.set_ylim(0.4, 0.75)
+    ax.set_ylim(0.2, 0.8)
     ax.set_title("Classifier performance")
     ax.set_ylabel("Accuracy")
 
