@@ -3,7 +3,7 @@ import json
 
 def load_config(config_id:str) -> dict:
     config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config")
-    config_filename = f"{config_id}.json"
+    config_filename = f"config-{config_id}.json"
     config_file_path = os.path.join(config_path, config_filename)
 
     if not os.path.exists(config_file_path):
