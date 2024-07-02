@@ -1,0 +1,7 @@
+{
+  "rereferencing": "mastoids",
+  "baseline": [-0.4, -0.1],
+  "cutoff_freq": [1.0, 15.0],
+  "crop_time": [1, 4.5],
+  "downsfreq": 64
+}

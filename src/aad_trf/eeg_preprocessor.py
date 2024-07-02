@@ -9,7 +9,6 @@ from utils import get_field_from_filename
 class EEG_Preprocessor:
     def __init__(self, config):
         self.config = config
-        self.config_eeg = config['eeg_preprocessing']
         self.preprocessed = False
 
     def load_epochs(self, epochs_path) -> Epochs:
@@ -54,11 +53,11 @@ class EEG_Preprocessor:
         return epochs.set_eeg_reference(ref)
     
     def run(self, epochs: Epochs) -> Epochs:
-        self.rereferencing = self.config_eeg['rereferencing']
-        self.baseline = tuple(self.config_eeg['baseline'])
-        self.cutoff_freq = tuple(self.config_eeg['cutoff_freq'])
-        self.crop_time = tuple(self.config_eeg['crop_time'])
-        self.downsfreq = self.config_eeg['downsfreq']
+        self.rereferencing = self.config['rereferencing']
+        self.baseline = tuple(self.config['baseline'])
+        self.cutoff_freq = tuple(self.config['cutoff_freq'])
+        self.crop_time = tuple(self.config['crop_time'])
+        self.downsfreq = self.config['downsfreq']
 
         if self.rereferencing:
             epochs = self.rereference(epochs, self.rereferencing)
@@ -75,23 +74,5 @@ class EEG_Preprocessor:
         return epochs
 
 if __name__ == "__main__":
-    import os
-    import argparse
-    from utils import load_config, set_paths_from_config
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--config_id", type=str, default="dataset-updown-nh_exp-1", help="Configuration ID")
-    args = parser.parse_args()
-    config_id = args.config_id
-
-    base_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    config = load_config(config_id)
-    path_dict = set_paths_from_config(base_path, config)
-
-    eeg_preprocessor = EEG_Preprocessor(config)
-    epochs = eeg_preprocessor.load_epochs(path_dict['epochs'])
-    epochs = eeg_preprocessor.run(epochs)
-    print(epochs)
-    epochs['up'].average().plot()
-    epochs['down'].average().plot()
+    pass
     
