@@ -68,25 +68,24 @@ Configuration should be saved in the `src/config` folder as `.json` format.  Con
 
 - Dataset name
   - [task-name]-[subject-population]
-
-- Configuration file
-  - `dataset-[dataset-name]_exp-[experiment-id].json`
-
+- Configuration file name
+  - `config-[configuration-id].json`
+  - configuration id: [processing_step]-[3-digit-number]
 - Data file
-  - `dataset-[dataset-name]_exp-[experiment-id]_data-[data-type](_sub-[subject_id]).[file-extension]`
+  - `dataset-[dataset-name]_data-[data-type]_config-[configuration-id](_sub-[subject_id]).[file-extension]`
   - Examples
-    - Preprocessed audio data: `dataset-[dataset-name]_exp-[experiment-id]_data-audio(_sub-[subject_id]).npy`
-    - Preprocessed eeg data: `dataset-[dataset-name]_exp-[experiment-id]_data-eeg(_sub-[subject-id])-epo.fif`
-    - AAD dataset: `dataset-[dataset-name]_exp-[experiment-id]_data-aad(_sub-[subject-id]).pkl`
+    - Preprocessed audio data: `dataset-[dataset-name]_data-audio_config-[configuration-id](_sub-[subject_id]).npy`
+    - Preprocessed eeg data: `dataset-[dataset-name]_data-eeg_config-[configuration-id](_sub-[subject-id])_-epo.fif`
+    - AAD dataset: `dataset-[dataset-name]_data-aad_config-[configuration-id](_sub-[subject-id]).pkl`
 
 - Models
-  - `dataset-[dataset-name]_exp-[experiment-id]_models-[model_type](_sub-[subject-id]).pkl`
+  - `dataset-[dataset-name]_models-[model_type]_config-[configuration-id](_sub-[subject-id]).pkl`
 
 - Figures
-  -  `dataset-[dataset-name]_exp-[experiment-id]_reports-[figure_type](_sub-[subject-id]).png`
+  -  `dataset-[dataset-name]_reports-[figure_type]_config-[configuration-id](_sub-[subject-id]).png`
 
 - Results
-  - `dataset-[dataset-name]_exp-[experiment-id]_reports-[result_type](_sub-[subject-id]).csv`
+  - `dataset-[dataset-name]_reports-[result_type]_config-[configuration-id](_sub-[subject-id]).csv`
 
 
 ## Python Library Dependency
