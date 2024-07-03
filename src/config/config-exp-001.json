@@ -1,5 +1,5 @@
 {
-  "dataset": "updown",
+  "dataset": "updown-nh",
   "preprocess-audio": {
     "config_id": "audio-001",
     "overwirte": "False"
