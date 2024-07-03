@@ -33,7 +33,7 @@ class TRF:
             output_data = dataset.get_eeg(moveaxis=True)
         elif self.direction == 'backward':
             input_data = dataset.get_eeg(moveaxis=True)
-            output_data = dataset.get_attended_audio(moveaxis=True, attended=attended)
+            output_data = dataset.get_audio(moveaxis=True, attended=attended)
         else: 
             raise ValueError(f"Invalid direction {self.direction}")
         
