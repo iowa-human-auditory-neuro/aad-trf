@@ -1,0 +1,19 @@
+{
+  "dataset": "updown-nh",
+  "preprocess-audio": {
+    "config_id": "audio-001",
+    "overwirte": "False"
+  },
+  "preprocess-eeg": {
+    "config_id": "eeg-001",
+    "overwrite": "False"
+  },
+  "trf": {
+    "config_id": "trf-002",
+    "overwrite": "False"
+  },
+  "classifier": {
+    "config_id": "classifier-001",
+    "overwrite": "False"
+  }
+}
