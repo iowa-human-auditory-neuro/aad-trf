@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 class AudioPreprocessor:
     def __init__(self, config:dict):
         self.config = config
-        self.config_audio = config['audio_preprocessing']
 
     def load_audio_data(self, audio_path:str) -> tuple[np.ndarray, float]:
         audio_files = sorted(glob.glob(f"{audio_path}/*.wav"))
@@ -40,8 +39,8 @@ class AudioPreprocessor:
         return np.abs(hilbert(audio))
     
     def run(self, audio:np.ndarray) -> np.ndarray:
-        downsfreq = self.config_audio['downsfreq']
-        crop_time = tuple(self.config_audio['crop_time'])
+        downsfreq = self.config['downsfreq']
+        crop_time = tuple(self.config['crop_time'])
 
         audio = self.extract_envelope(audio)
 
@@ -62,22 +61,4 @@ class AudioPreprocessor:
         return axs
 
 if __name__ == "__main__":
-    import os
-    import argparse
-    from utils import load_config, set_paths_from_config
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--config_id", type=str, default="dataset-updown-nh_exp-1", help="Configuration ID")
-    args = parser.parse_args()
-    config_id = args.config_id
-
-    base_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    config = load_config(config_id)
-    path_dict = set_paths_from_config(base_path, config)
-
-    audio_preprocessor = AudioPreprocessor(config)
-    audio_array, sfreq_audio = audio_preprocessor.load_audio_data(path_dict['audio'])
-    print(audio_array.shape)
-    audio = audio_preprocessor.run(audio_array)
-    print(audio.shape)
-    axs = audio_preprocessor.plot(audio)
+    pass
