@@ -28,6 +28,7 @@ path_dict = set_paths_from_config(base_path, config)
 files = glob.glob(f"{path_dict['features']}/dataset-{dataset_name}_data-aad-trfscores_config-{config_id_trf}_sub-*.pkl")
 files.sort()
 model_name = config_clf['model_name']
+results_by_trial_full = pd.DataFrame()
 clf_results = pd.DataFrame(columns=["test_sub_id", 
                                     "classifier", 
                                     "accuracy_train", 
@@ -51,6 +52,22 @@ for file in files:
     optimization_results.to_csv(os.path.join(path_dict['reports'], f"{optimization_results_filename}.csv"))
 
     clf.train(train_dataset)
+
+    sub_ids = test_dataset.sub_ids
+    trial = np.arange(1, len(test_dataset)+1)
+    label = test_dataset.labels
+    prob = clf.model.predict_proba(test_dataset.features)
+    prediction = clf.predict(test_dataset)
+    correct = label == prediction
+    results_by_trial = pd.DataFrame({"sub_id": sub_ids, 
+                                     "trial": trial, 
+                                     "output1": prob[:, 0], 
+                                     "output2": prob[:, 1], 
+                                     "prediction": prediction, 
+                                     "label": label, 
+                                     "correct": correct})
+    results_by_trial_full = pd.concat([results_by_trial_full, results_by_trial])
+
     print(f"Accuracy Train: {clf.eval(train_dataset):.3f}")
     print(f"Accuracy Test: {clf.eval(test_dataset):.3f}")
     model_filename = f"dataset-{dataset_name}_models-{model_name}_config-{config_id_clf}_sub-{test_sub_id}"
@@ -65,6 +82,9 @@ for file in files:
                     "f1": clf.eval(test_dataset, scoring="f1")
                     }
     clf_results = pd.concat([clf_results, pd.DataFrame([results_dict])])
+
+clf_results_by_trial_filename = f"dataset-{dataset_name}_reports-clf-results-by-trial_models-{model_name}_config-{config_id_clf}"
+results_by_trial_full.to_csv(os.path.join(path_dict['reports'], f"{clf_results_by_trial_filename}.csv"))
 
 clf_results_filename = f"dataset-{dataset_name}_reports-clf-performance_models-{model_name}_config-{config_id_clf}"
 clf_results.to_csv(os.path.join(path_dict['reports'], f"{clf_results_filename}.csv"))
