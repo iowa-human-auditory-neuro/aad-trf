@@ -129,7 +129,9 @@ class TRF:
     
     def parse_scores_as_features(self, dataset:AAD_Dataset):
         input_data, output_data = self._get_input_output(dataset, attended=False)
-        scores = np.zeros((len(dataset), 2, len(dataset.eeg_channels))) # (trials, up/down, channels)
+        coef = self.get_model_coef()
+        scores = np.zeros((len(dataset), 2, coef.shape[0])) # (trials, up/down, channels)
+        del coef
         if self.direction == 'forward':
             for trial in tqdm(range(len(dataset))):
                 scores[trial,0,:] = self.model.score(input_data[:,trial,[0]], output_data[:,trial,:])
@@ -162,23 +164,29 @@ class TRF:
         if type == 'coef':
             coef = self.get_model_coef()
             times = self.get_delays_in_sec()
-            ax = plot_trf_coef(coef, 
-                               times, 
-                               self.delays, 
-                               dataset,
-                               plot_channels=plot_channels
-                               )
+            if self.direction == 'forward':
+                ax = plot_trf_coef(coef, 
+                                times, 
+                                self.delays, 
+                                dataset,
+                                plot_channels=plot_channels
+                                )
+            elif self.direction == 'backward':
+                ax = plot_topo(coef[0,:,14], dataset.eeg_info, type='coef')
+                ax.set_title("TRF coefficients")
         elif type == 'scores':
-            ax = plot_scores_topo(self.eval(dataset).mean(axis=0), 
-                                  dataset.eeg_info
-                                  )
+            ax = plot_topo(self.eval(dataset).mean(axis=0), dataset.eeg_info, type='corrcoef')
+            ax.set_title("TRF performance scores")
         elif type == 'hp-tuning':
             ax = plot_lambda_optimization(self._optimization_result)
         elif type == 'prediction':
-            ax = plot_eeg_prediction(dataset, 
-                                     self.predict(dataset),
-                                     plot_channels=plot_channels
-                                     )
+            if self.direction == 'forward':
+                ax = plot_eeg_prediction(dataset, 
+                                        self.predict(dataset),
+                                        plot_channels=plot_channels
+                                        )
+            elif self.direction == 'backward':
+                ax = plot_audio_prediction(dataset, self.predict(dataset))
         else:
             raise ValueError(f"Invalid plot type {type}")
         
