@@ -14,18 +14,19 @@ class EEG_Preprocessor:
     def load_epochs(self, epochs_path) -> Epochs:
         files = sorted(glob.glob(f"{epochs_path}/*epo.fif"))
         epochs_list = []
-        remove_bads = "n"
+        interpolate_bads = "n"
         for file in files:
             filename = file.split("/")[-1]
             sub_id = get_field_from_filename(filename, "sub")
             assert len(sub_id) == 6, f"Invalid subID: {sub_id}"
             epochs = read_epochs(file)
             if epochs.info["bads"]:
-                if remove_bads == "n":
-                    remove_bads = input("Bad channels info are present. Do you want to remove this info? (y/n): ")
-                if remove_bads == "y":
-                    epochs.info["bads"] = []
-                elif remove_bads != "n":
+                interpolate_bads = input("Bad channels info are present. Do you want to interploate? (y/n): ")
+                if interpolate_bads == "y":
+                    epochs = epochs.interpolate_bads()
+                elif interpolate_bads == "n":
+                    pass
+                else:
                     raise ValueError("Invalid input")
 
             if epochs.metadata is None:
