@@ -2,7 +2,7 @@
 /data/features/*.fif
 /data/features/*.npy
 /data/features/*.pkl
-/data/updown-nh/*
+/data/updown-nh*/*
 
 # Ignore files inside the models folder
 /models/*.pkl
