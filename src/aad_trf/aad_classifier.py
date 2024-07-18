@@ -24,12 +24,12 @@ class AAD_Classifier:
         self.model = model
         self.params = params
 
-        if self.model_name == "LogisticRegression":
+        if self.model_name == "logistic-regression":
             self.model = LogisticRegression(max_iter=1000)
             self.params = {
                 "C": np.logspace(-5, 3, 9)
             }
-        elif self.model_name == "RandomForest":
+        elif self.model_name == "random-forest":
             self.model = RandomForestClassifier(max_features="sqrt")
             self.params = {
                 "max_depth": np.linspace(2, 10, 5, dtype=int),
@@ -40,8 +40,8 @@ class AAD_Classifier:
             self.params = {
                 "C": np.logspace(-9, 1, 11)
             }
-        elif self.model_name == "SVC":
-            self.model = SVC(kernel="rbf")
+        elif self.model_name == "svc-rbf":
+            self.model = SVC(kernel="rbf", probability=True)
             self.params = {
                 "C": np.logspace(-4, 6, 6),
                 "gamma": np.logspace(-10, 0, 6)
