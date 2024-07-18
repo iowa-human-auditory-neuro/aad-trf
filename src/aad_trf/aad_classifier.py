@@ -35,8 +35,8 @@ class AAD_Classifier:
                 "max_depth": np.linspace(2, 10, 5, dtype=int),
                 "n_estimators": np.linspace(100, 500, 5, dtype=int)
             }
-        elif self.model_name == "LinearSVC":
-            self.model = LinearSVC(max_iter=1000, fit_intercept=False)
+        elif self.model_name == "svc-linear":
+            self.model = SVC(kernel="linear", probability=True)
             self.params = {
                 "C": np.logspace(-9, 1, 11)
             }
