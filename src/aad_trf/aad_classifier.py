@@ -25,27 +25,13 @@ class AAD_Classifier:
         self.params = params
 
         if self.model_name == "logistic-regression":
-            self.model = LogisticRegression(max_iter=1000)
-            self.params = {
-                "C": np.logspace(-5, 3, 9)
-            }
+            self.model = LogisticRegression()
         elif self.model_name == "random-forest":
-            self.model = RandomForestClassifier(max_features="sqrt")
-            self.params = {
-                "max_depth": np.linspace(2, 10, 5, dtype=int),
-                "n_estimators": np.linspace(100, 500, 5, dtype=int)
-            }
+            self.model = RandomForestClassifier()
         elif self.model_name == "svc-linear":
             self.model = SVC(kernel="linear", probability=True)
-            self.params = {
-                "C": np.logspace(-9, 1, 11)
-            }
         elif self.model_name == "svc-rbf":
             self.model = SVC(kernel="rbf", probability=True)
-            self.params = {
-                "C": np.logspace(-4, 6, 6),
-                "gamma": np.logspace(-10, 0, 6)
-            }
         else:
             raise ValueError("Invalid classifier name")
     

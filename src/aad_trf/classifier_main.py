@@ -12,7 +12,7 @@ from aad_plotter import plot_clf_results
 from utils import load_config, set_paths_from_config, get_field_from_filename
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--config_id", type=str, default="exp-001", help="Configuration ID")
+parser.add_argument("--config_id", type=str, default="exp-005", help="Configuration ID")
 args = parser.parse_args()
 config_id = args.config_id
 config = load_config(config_id)
@@ -46,7 +46,8 @@ for file in files:
     test_dataset = dataset[dataset.sub_ids == test_sub_id]
     print(train_dataset.features.shape, test_dataset.features.shape)
 
-    clf = AAD_Classifier(model_name=config_clf['model_name'])
+    clf = AAD_Classifier(model_name=config_clf['model_name'],
+                         params = config_clf['params'])
     optimization_results = clf.optimize_hyperparmeters(train_dataset, n_splits=10)
     optimization_results_filename = f"dataset-{dataset_name}_reports-clf-optimization_models-{model_name}_config-{config_id_clf}_sub-{test_sub_id}"
     optimization_results.to_csv(os.path.join(path_dict['reports'], f"{optimization_results_filename}.csv"))
