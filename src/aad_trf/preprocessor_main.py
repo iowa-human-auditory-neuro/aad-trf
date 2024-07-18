@@ -8,7 +8,7 @@ from eeg_preprocessor import EEG_Preprocessor
 from utils import load_config, set_paths_from_config
 
 parser = argparse.ArgumentParser(description="Preprocess audio and eeg files")
-parser.add_argument("--config_id", type=str, default="exp-001", help="Configuration ID")
+parser.add_argument("--config_id", type=str, default="exp-004", help="Configuration ID")
 args = parser.parse_args()
 config_id = args.config_id
 
