@@ -12,7 +12,7 @@ from aad_plotter import plot_clf_results
 from utils import load_config, set_paths_from_config, get_field_from_filename
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--config_id", type=str, default="exp-005", help="Configuration ID")
+parser.add_argument("--config_id", type=str, default="exp-001", help="Configuration ID")
 args = parser.parse_args()
 config_id = args.config_id
 config = load_config(config_id)
