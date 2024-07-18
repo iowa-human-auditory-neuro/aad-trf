@@ -1,7 +1,7 @@
 
 import glob
 import pandas as pd
-from mne import Epochs, read_epochs, concatenate_epochs
+from mne import Epochs, read_epochs, concatenate_epochs, match_channel_orders
 from math import ceil
 
 from utils import get_field_from_filename
@@ -34,6 +34,8 @@ class EEG_Preprocessor:
             elif "sub_id" not in epochs.metadata.columns:
                 epochs.metadata["sub_id"] = [sub_id]*len(epochs)
             epochs_list.append(epochs)
+
+        epochs_list = match_channel_orders(epochs_list)
 
         return concatenate_epochs(epochs_list)
 
