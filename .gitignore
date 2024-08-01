@@ -11,6 +11,8 @@
 /reports/*.csv
 /reports/*.png
 
+.vscode
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
