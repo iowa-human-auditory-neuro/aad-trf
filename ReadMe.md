@@ -1,6 +1,6 @@
 # aad_trf Module
 
-Version: 1.0
+Version: 1.1
 
 Author: Jusung Ham
 
@@ -37,32 +37,9 @@ This module is made for auditory attention decoding (AAD) based on the temporal 
 To start the process, epoched EEG data and audio file is required. EEG data should be saved in the `data/[raw_datset]/epochs` folder as `.fif` file format; Audio data should be save in the `data/[raw_datset]/audio` folder as `.wav` file format. 
 
 ## Configuration Parsing
-Configuration should be saved in the `src/config` folder as `.json` format. There are two levels of configuration. The upper-level configuration include which configuration file to use for each process. The lower-level configuration includes specific parameters for the process. Below are the example of configuration files. Please refer to the description of individual class and methods for the possible options for each field.
+Configuration should be saved in the `src/config` folder as `.json` format. Below are the example of configuration files. Please refer to the description of individual class and methods for the possible options for each field.
 
-### Upper-level cofiguration for controlling all the processes
-```json
-{
-  "dataset": "updown",
-  "preprocess-audio": {
-    "config_id": "audio-001",
-    "overwirte": "False"
-  },
-  "preprocess-eeg": {
-    "config_id": "eeg-001",
-    "overwrite": "False"
-  },
-  "trf": {
-    "config_id": "trf-001",
-    "overwrite": "False"
-  },
-  "classifier": {
-    "config_id": "classifier-001",
-    "overwrite": "False"
-  }
-}
-```
-### Lower-level configurations for each process
-#### Audio preprocessing
+### Audio preprocessing
 
 ```json
 {
@@ -71,7 +48,7 @@ Configuration should be saved in the `src/config` folder as `.json` format. Ther
 }
 ```
 
-#### EEG preprocessing
+### EEG preprocessing
 
 ```json
 {
@@ -82,10 +59,13 @@ Configuration should be saved in the `src/config` folder as `.json` format. Ther
   "downsfreq": 64
 }
 ```
-#### TRF
+### TRF
 
 ```json
 {
+  "dataset": "updown-nh",
+  "config_id_audio": "audio-001",
+  "config_id_eeg": "eeg-001",
   "normalize": "True",
   "direction": "forward",
   "delays": [0,0.4],
@@ -95,10 +75,11 @@ Configuration should be saved in the `src/config` folder as `.json` format. Ther
 }
 ```
 
-#### Classification
+### Classification
 
 ```json
 {
+  "config_id_trf": "trf-001",
   "model_name": "LogisticRegression"
 }
 ```
