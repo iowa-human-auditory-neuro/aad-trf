@@ -1,4 +1,7 @@
 {
+  "dataset": "updown-nh",
+  "config_id_audio": "audio-001",
+  "config_id_eeg": "eeg-001",
   "normalize": "True",
   "direction": "forward",
   "delays": [0,0.4],
