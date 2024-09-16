@@ -43,7 +43,8 @@ class AAD_Classifier:
                             )
                             
         print("Finding best parameters...")
-        grid.fit(dataset.features, dataset.labels)
+        features = dataset.get_features(normalize=True)
+        grid.fit(features, dataset.labels)
         print(f"Best parameters: {grid.best_params_} with a score of {grid.best_score_:.3f}")
         self.model = clone(grid.best_estimator_)
         self.params = grid.best_params_
