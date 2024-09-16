@@ -2,7 +2,7 @@
   "config_id_trf": "trf-001",
   "model_name": "logistic-regression",
   "params": {
-    "max_iter": 1000,
+    "max_iter": [1000],
     "C": [1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 1e1, 1e2, 1e3],
     "penalty": ["l1", "l2"],
     "solver": ["lbfgs", "liblinear"]
