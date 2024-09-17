@@ -29,6 +29,7 @@ class AAD_Classifier:
             self.model = SVC(kernel="rbf", probability=True)
         else:
             raise ValueError("Invalid classifier name")
+        print("Classifier:", self.model_name)
     
     def optimize_hyperparmeters(self, 
                                 dataset:AAD_Dataset, 
@@ -52,7 +53,7 @@ class AAD_Classifier:
         return pd.DataFrame(grid.cv_results_)
     
     def train(self, dataset:AAD_Dataset):
-        X = dataset.features
+        X = dataset.get_features(normalize=True)
         y = dataset.labels
         self.model.fit(X, y)
     
@@ -73,7 +74,7 @@ class AAD_Classifier:
             raise ValueError(f"Invalid scoring method {scoring}")
     
     def predict(self, dataset:AAD_Dataset):
-        X = dataset.features
+        X = dataset.get_features(normalize=True)
         return self.model.predict(X)
     
     def save(self, path):
