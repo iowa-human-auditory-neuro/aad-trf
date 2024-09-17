@@ -124,12 +124,18 @@ def plot_scores_topo(scores,
         vlim = (-0.1,0.1)
     elif scoring == 'r2':
         vlim = (0,1)
+    
+    if set(['FPz', 'Oz', 'T7', 'T8']) <= set(eeg_info['ch_names']):
+        sphere = 'eeglab'
+    else:
+        sphere = 'auto'
+
     fig, ax = plt.subplots(figsize=(6,6))
     score_topography, _ = plot_topomap(scores, 
                                     pos=eeg_info,
                                     show=False,
                                     vlim=vlim,
-                                    sphere='eeglab',
+                                    sphere=sphere,
                                     axes=ax
                                     )
     plt.colorbar(score_topography, 
