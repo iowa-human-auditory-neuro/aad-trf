@@ -27,6 +27,8 @@ class TRF:
         self.scoring = scoring
         self.lambda_ = lambda_
         
+        self.patterns = True if self.direction == 'backward' else False
+        
     def _get_input_output(self, dataset:AAD_Dataset, attended=True):
         if self.direction == 'forward':
             input_data = dataset.get_audio(moveaxis=True, attended=attended)
@@ -67,7 +69,8 @@ class TRF:
                                     tmax=self.delays[1], 
                                     sfreq=dataset.sfreq, 
                                     estimator=lambda_, 
-                                    scoring=self.scoring
+                                    scoring=self.scoring,
+                                    patterns=self.patterns
                                     )
                 input_train, output_train = self._get_input_output(train_dataset)
                 input_valid, output_valid = self._get_input_output(valid_dataset)
@@ -85,7 +88,8 @@ class TRF:
                             tmax=self.delays[1], 
                             sfreq=dataset.sfreq, 
                             estimator=self.lambda_, 
-                            scoring=self.scoring
+                            scoring=self.scoring,
+                            patterns=self.patterns
                             )
         input_train, output_train = self._get_input_output(dataset)
         model.fit(input_train, output_train)
@@ -142,7 +146,12 @@ class TRF:
         return dataset
     
     def get_model_coef(self):
-        return self.model.coef_
+        if self.direction == 'forward':
+            return self.model.coef_[:,0,:]
+        elif self.direction == 'backward':
+            return self.model.patterns_[0,:,:]
+        else:
+            raise ValueError(f"Invalid direction {self.direction}. Direction must be either 'forward' or 'backward'.")
     
     def get_delays_in_sec(self):
         return self.model.delays_ / float(self.model.sfreq)
