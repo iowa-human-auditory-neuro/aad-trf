@@ -35,7 +35,7 @@ clf_results = pd.DataFrame(columns=["test_sub_id",
                                     "recall", 
                                     "f1"])
 for file in files:
-    filename = file.split("/")[-1].split(".")[0]
+    filename = os.path.basename(file).split(".")[0]
     test_sub_id = get_field_from_filename(filename, "sub")
     print(f"Test subject: {test_sub_id}")
     dataset = AAD_Dataset.load_from_file(file)
