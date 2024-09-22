@@ -118,12 +118,14 @@ def plot_lambda_optimization(optimization_result:pd.DataFrame):
 
 def plot_scores_topo(scores, 
                      eeg_info:mne.Info, 
-                     scoring:str='corrcoef'
+                     scoring:str='corrcoef',
+                     vlim:tuple=None
                      ):
-    if scoring == 'corrcoef':
-        vlim = (-0.1,0.1)
-    elif scoring == 'r2':
-        vlim = (0,1)
+    if vlim is None:
+        if scoring == 'corrcoef':
+            vlim = (-0.1,0.1)
+        elif scoring == 'r2':
+            vlim = (0,1)
     
     if set(['FPz', 'Oz', 'T7', 'T8']) <= set(eeg_info['ch_names']):
         sphere = 'eeglab'
