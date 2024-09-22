@@ -33,8 +33,8 @@ def plot_audio_waveform(dataset:AAD_Dataset):
     times = dataset.get_times()
 
     fig, axs = plt.subplots(2,1,figsize=(6,6))
-    axs[0].plot(times, audio_up, color='k', label="True")
-    axs[1].plot(times, audio_down, color='k', label="True")
+    axs[0].plot(times, audio_up, color='r', label="True")
+    axs[1].plot(times, audio_down, color='b', label="True")
     plt.setp(axs, xlim=(times[0], times[-1]))
     plt.setp(axs, ylabel="Amplitude (A.U.)")
     axs[0].set_title("Up")
@@ -42,7 +42,7 @@ def plot_audio_waveform(dataset:AAD_Dataset):
     fig.supxlabel("Time (s)")
     fig.suptitle("Audio waveform")
 
-    return fig, axs
+    return axs
 
 def plot_eeg_waveform(dataset:AAD_Dataset,
                       plot_channels:list=None
@@ -167,7 +167,7 @@ def plot_scores_topo(scores,
         sphere = 'auto'
 
     fig, ax = plt.subplots(figsize=(6,6))
-    score_topography, _ = plot_topomap(data, 
+    score_topography, _ = plot_topomap(scores, 
                                     pos=eeg_info,
                                     show=False,
                                     vlim=vlim,
@@ -176,12 +176,13 @@ def plot_scores_topo(scores,
                                     axes=ax
                                     )
     plt.colorbar(score_topography, 
-                 label=type, 
+                 label=scoring, 
                  orientation='vertical', 
                  shrink=0.5,
-                 ticks=ticks,
+                 ticks=[vlim[0], 0, vlim[1]],
                  ax=ax
                  )
+    ax.set_title("Model performance across channels")
 
     return ax
 
@@ -228,6 +229,8 @@ def plot_audio_prediction(dataset:AAD_Dataset,
     axs[1].set_title("Down")
     plt.setp(axs, ylabel="Amplitude (A.U.)")
     fig.suptitle("Averaged True and Predicted audio waveform")
+
+    return axs
 
 def plot_clf_results(clf_results:pd.DataFrame):
     fig, ax = plt.subplots(figsize=(6,8))
