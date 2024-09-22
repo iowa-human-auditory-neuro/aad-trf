@@ -133,7 +133,7 @@ class TRF:
     
     def parse_scores_as_features(self, dataset:AAD_Dataset):
         input_data, output_data = self._get_input_output(dataset, attended=False)
-        scores = np.zeros((len(dataset), 2, len(dataset.eeg_channels))) # (trials, up/down, channels)
+        scores = np.zeros((len(dataset), 2, self.model.coef_.shape[0])) # (trials, up/down, channels)
         if self.direction == 'forward':
             for trial in tqdm(range(len(dataset))):
                 scores[trial,0,:] = self.model.score(input_data[:,trial,[0]], output_data[:,trial,:])
