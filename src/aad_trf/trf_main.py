@@ -74,7 +74,7 @@ for train_index, test_index in cv.split(dataset.labels, groups=groups):
         plot_channels_str = "".join(plot_channels)
         plot_delays = (0.125,0.175) if trf.direction=='forward' else (-0.175,-0.125)
         fig_filename = f"dataset-{dataset_name}_reports-trf-{plot}_config-{config_id}_sub-{test_sub_id}_ch-{plot_channels_str}"
-        ax = trf.plot(type=plot, 
+        ax = trf.plot(plot_type=plot, 
                         dataset=test_dataset,
                         plot_channels=plot_channels,
                         delays=plot_delays,

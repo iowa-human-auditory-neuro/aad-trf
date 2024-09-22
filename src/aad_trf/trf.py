@@ -163,14 +163,14 @@ class TRF:
 
     def plot(self, 
              dataset:AAD_Dataset,
-             type:str='coef', 
+             plot_type:str='coef', 
              delays:tuple=None,
              plot_channels:list=None,
              save:bool=False,
              save_path:str=None
              ):
         delays = self.delays if delays is None else delays
-        if type == 'coef-waveform':
+        if plot_type == 'coef-waveform':
             coef = self.get_model_coef()
             times = self.get_delays_in_sec()
             ax = plot_trf_waveform(coef, 
@@ -179,7 +179,7 @@ class TRF:
                                        dataset,
                                        plot_channels=plot_channels
                                       )
-        elif type == 'coef-topo':
+        elif plot_type == 'coef-topo':
             coef = self.get_model_coef()
             times = self.get_delays_in_sec()
             ax = plot_trf_topo(coef, 
@@ -187,19 +187,19 @@ class TRF:
                                 delays, 
                                 dataset.eeg_info
                                 )
-        elif type == 'scores':
+        elif plot_type == 'scores':
             ax = plot_scores_topo(self.eval(dataset).mean(axis=0), 
                                   dataset.eeg_info
                                   )
-        elif type == 'hp-tuning':
+        elif plot_type == 'hp-tuning':
             ax = plot_lambda_optimization(self._optimization_result)
-        elif type == 'prediction':
+        elif plot_type == 'prediction':
             ax = plot_eeg_prediction(dataset, 
                                      self.predict(dataset),
                                      plot_channels=plot_channels
                                      )
         else:
-            raise ValueError(f"Invalid plot type {type}")
+            raise ValueError(f"Invalid plot type {plot_type}")
         
         plt.savefig(save_path) if save else plt.show()
         
@@ -259,7 +259,7 @@ class TRF:
                                 config['search_space'][1], 
                                 config['search_space'][2]
                                 )
-        eeg_prediction = []
+        prediction = []
         for train_index, test_index in cv.split(dataset.labels, groups=groups):
             train_dataset = dataset[train_index]
             test_dataset = dataset[test_index]
@@ -284,13 +284,18 @@ class TRF:
             # dataset_filename = f"dataset-{dataset_name}_data-aad-trfscores_config-{config_id}_sub-{test_sub_id}"
             # dataset.save(os.path.join(path_dict['features'], f"{dataset_filename}.pkl"))
 
-            for type in ['coef-waveform', 'coef-topo', 'scores', 'hp-tuning', 'prediction']:
-                print(f"Plotting {type}...")
+            if trf.direction == 'forward':
+                plots = ['coef-waveform', 'coef-topo', 'scores', 'hp-tuning', 'prediction']
+            else:
+                plots = ['coef-waveform', 'coef-topo', 'hp-tuning', 'prediction']
+
+            for plot in plots:
+                print(f"Plotting {plot}...")
                 plot_channels = ['FCz']
                 plot_channels_str = "".join(plot_channels)
-                fig_filename = f"dataset-{dataset_name}_reports-trf-{type}_config-{config_id}_sub-{test_sub_id}_ch-{plot_channels_str}"
+                fig_filename = f"dataset-{dataset_name}_reports-trf-{plot}_config-{config_id}_sub-{test_sub_id}_ch-{plot_channels_str}"
                 plot_delays = (0.125,0.175) if trf.direction=='forward' else (-0.175,-0.125)
-                ax = trf.plot(type=type, 
+                ax = trf.plot(plot_type=plot, 
                                 dataset=test_dataset,
                                 delays=plot_delays,
                                 plot_channels=plot_channels,
@@ -299,14 +304,17 @@ class TRF:
                                 )
 
         # Grand Average EEG - TRF prediction
-        eeg_prediction = np.concatenate(eeg_prediction, axis=1)
+        prediction = np.concatenate(prediction, axis=1)
         # fig_filename = f"dataset-{dataset_name}_reports-trf-prediction_config-{config_id}_sub-grand-average_ch-{plot_channels_str}"
         # save_path = os.path.join(path_dict['reports'], f"{fig_filename}.png")
-        axs = plot_eeg_prediction(dataset,
-                                eeg_prediction,
+        if trf.direction == 'forward':
+            axs = plot_eeg_prediction(dataset,
+                                prediction,
                                 plot_channels=plot_channels,
                                 scaling_factor=1.5
                                 )
+        elif trf.direction == 'backward':
+            axs = plot_audio_prediction(dataset, prediction)
         # plt.savefig(save_path)
 
 if __name__ == '__main__':
