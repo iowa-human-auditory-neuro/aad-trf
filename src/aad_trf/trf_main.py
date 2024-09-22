@@ -11,7 +11,7 @@ from utils import load_config, set_paths_from_config
 from aad_plotter import plot_eeg_prediction
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--config_id", type=str, default="trf-001", help="Configuration ID for TRF")
+parser.add_argument("--config_id", plot=str, default="trf-001", help="Configuration ID for TRF")
 args = parser.parse_args()
 config_id = args.config_id
 
@@ -62,13 +62,18 @@ for train_index, test_index in cv.split(dataset.labels, groups=groups):
     dataset_filename = f"dataset-{dataset_name}_data-aad-trfscores_config-{config_id}_sub-{test_sub_id}"
     dataset.save(os.path.join(path_dict['features'], f"{dataset_filename}.pkl"))
 
-    for type in ['coef-waveform', 'coef-topo', 'scores', 'hp-tuning', 'prediction']:
-        print(f"Plotting {type}...")
+    if trf.direction == 'forward':
+        plots = ['coef-waveform', 'coef-topo', 'scores', 'hp-tuning', 'prediction']
+    else:
+        plots = ['coef-waveform', 'coef-topo', 'hp-tuning', 'prediction']
+
+    for plot in plots:
+        print(f"Plotting {plot}...")
         plot_channels = ['FCz']
         plot_channels_str = "".join(plot_channels)
         plot_delays = (0.125,0.175) if trf.direction=='forward' else (-0.175,-0.125)
-        fig_filename = f"dataset-{dataset_name}_reports-trf-{type}_config-{config_id}_sub-{test_sub_id}_ch-{plot_channels_str}"
-        ax = trf.plot(type=type, 
+        fig_filename = f"dataset-{dataset_name}_reports-trf-{plot}_config-{config_id}_sub-{test_sub_id}_ch-{plot_channels_str}"
+        ax = trf.plot(type=plot, 
                         dataset=test_dataset,
                         plot_channels=plot_channels,
                         delays=plot_delays,
