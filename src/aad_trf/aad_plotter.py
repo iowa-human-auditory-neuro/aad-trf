@@ -33,8 +33,8 @@ def plot_audio_waveform(dataset:AAD_Dataset):
     times = dataset.get_times()
 
     fig, axs = plt.subplots(2,1,figsize=(6,6))
-    axs[0].plot(times, audio_up, color='b')
-    axs[1].plot(times, audio_down, color='r')
+    axs[0].plot(times, audio_up, color='r', label="True")
+    axs[1].plot(times, audio_down, color='b', label="True")
     plt.setp(axs, xlim=(times[0], times[-1]))
     plt.setp(axs, ylabel="Amplitude (A.U.)")
     axs[0].set_title("Up")
@@ -209,6 +209,26 @@ def plot_eeg_prediction(dataset:AAD_Dataset,
     axs[1].legend(loc='upper right')
     plt.setp(axs, ylabel="Amplitude (A.U.)")
     fig.suptitle(f"Averaged True and Predicted EEG waveform {plot_channels}")
+
+    return axs
+
+def plot_audio_prediction(dataset:AAD_Dataset,
+                          audio_prediction:np.ndarray,
+                          scaling_factor=20
+                          ):
+    audio_prediction *= scaling_factor
+    audio_up = audio_prediction[:,dataset.labels == 0,:].mean(axis=1)
+    audio_down = audio_prediction[:,dataset.labels == 1,:].mean(axis=1)
+    times = dataset.get_times()
+    fig, axs = plot_audio_waveform(dataset)
+    axs[0].plot(times, audio_up, color='r', label="Predicted")
+    axs[0].legend(loc='upper right')
+    axs[0].set_title("Up")
+    axs[1].plot(times, audio_down, color='b', label="Predicted")
+    axs[1].legend(loc='upper right')
+    axs[1].set_title("Down")
+    plt.setp(axs, ylabel="Amplitude (A.U.)")
+    fig.suptitle("Averaged True and Predicted audio waveform")
 
     return axs
 

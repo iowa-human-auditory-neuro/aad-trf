@@ -8,7 +8,7 @@ from sklearn.model_selection import LeaveOneGroupOut
 from aad_dataset import AAD_Dataset
 from trf import TRF
 from utils import load_config, set_paths_from_config
-from aad_plotter import plot_eeg_prediction
+from aad_plotter import plot_eeg_prediction, plot_audio_prediction
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--config_id", type=str, default="trf-001", help="Configuration ID for TRF")
@@ -38,7 +38,7 @@ search_space = np.logspace(config['search_space'][0],
                         config['search_space'][1], 
                         config['search_space'][2]
                         )
-eeg_prediction = []
+prediction = []
 for train_index, test_index in cv.split(dataset.labels, groups=groups):
     train_dataset = dataset[train_index]
     test_dataset = dataset[test_index]
@@ -56,7 +56,8 @@ for train_index, test_index in cv.split(dataset.labels, groups=groups):
     trf.train(train_dataset)
     trf_filename = f"dataset-{dataset_name}_models-trf_config-{config_id}_sub-{test_sub_id}"
     trf.save(os.path.join(path_dict['models'], f"{trf_filename}.pkl"))
-    eeg_prediction.append(trf.predict(test_dataset))
+    # trf = TRF.load(os.path.join(path_dict['models'], f"{trf_filename}.pkl"))
+    prediction.append(trf.predict(test_dataset))
 
     dataset = trf.parse_scores_as_features(dataset)
     dataset_filename = f"dataset-{dataset_name}_data-aad-trfscores_config-{config_id}_sub-{test_sub_id}"
@@ -82,12 +83,15 @@ for train_index, test_index in cv.split(dataset.labels, groups=groups):
                         )
 
 # Grand Average EEG - TRF prediction
-eeg_prediction = np.concatenate(eeg_prediction, axis=1)
+prediction = np.concatenate(prediction, axis=1)
 fig_filename = f"dataset-{dataset_name}_reports-trf-prediction_config-{config_id}_sub-grand-average_ch-{plot_channels_str}"
 save_path = os.path.join(path_dict['reports'], f"{fig_filename}.png")
-axs = plot_eeg_prediction(dataset,
-                          eeg_prediction,
-                          plot_channels=plot_channels,
-                          scaling_factor=1.5
-                          )
+if trf.direction == 'forward':
+    axs = plot_eeg_prediction(dataset,
+                            prediction,
+                            plot_channels=plot_channels,
+                            scaling_factor=1.5
+                            )
+elif trf.direction == 'backward':
+    axs = plot_audio_prediction(dataset, prediction)
 plt.savefig(save_path)
