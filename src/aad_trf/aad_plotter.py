@@ -135,6 +135,7 @@ def plot_scores_topo(scores,
                                     pos=eeg_info,
                                     show=False,
                                     vlim=vlim,
+                                    cmap='RdBu_r',
                                     sphere=sphere,
                                     axes=ax
                                     )
