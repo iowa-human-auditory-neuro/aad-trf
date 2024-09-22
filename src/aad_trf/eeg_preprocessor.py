@@ -11,7 +11,7 @@ class EEG_Preprocessor:
         self.config = config
         self.preprocessed = False
 
-    def load_epochs(self, epochs_path) -> Epochs:
+    def load_epochs(self, epochs_path, interpolate_bads=False) -> Epochs:
         files = sorted(glob.glob(f"{epochs_path}/*epo.fif"))
         epochs_list = []
         interpolate_bads = "n"
@@ -21,13 +21,11 @@ class EEG_Preprocessor:
             assert len(sub_id) == 6, f"Invalid subID: {sub_id}"
             epochs = read_epochs(file)
             if epochs.info["bads"]:
-                interpolate_bads = input("Bad channels info are present. Do you want to interploate? (y/n): ")
-                if interpolate_bads == "y":
+                # interpolate_bads = input("Bad channels info are present. Do you want to interploate? (y/n): ")
+                if interpolate_bads:
                     epochs = epochs.interpolate_bads()
-                elif interpolate_bads == "n":
-                    pass
                 else:
-                    raise ValueError("Invalid input")
+                    pass
 
             if epochs.metadata is None:
                 epochs.metadata = pd.DataFrame({"sub_id": [sub_id]*len(epochs)})

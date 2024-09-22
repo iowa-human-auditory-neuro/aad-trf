@@ -1,0 +1,8 @@
+{
+  "config_id_trf": "trf-003",
+  "model_name": "svc-linear",
+  "params": {
+    "C": [1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 1e1],
+    "max_iter": [-1]
+  }
+}

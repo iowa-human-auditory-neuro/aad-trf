@@ -74,7 +74,7 @@ def plot_eeg_waveform(dataset:AAD_Dataset,
 
     return fig, axs
 
-def plot_trf_coef(coef:np.ndarray,
+def plot_trf_waveform(coef:np.ndarray,
                   times:np.ndarray,
                   delays:tuple,
                   dataset:AAD_Dataset,
@@ -82,7 +82,7 @@ def plot_trf_coef(coef:np.ndarray,
                   time_step=0.1
                   ):
     coef = select_channels(coef, plot_channels, dataset)
-    coef = coef.squeeze()
+    # coef = coef.squeeze()
     coef = coef.T
 
     fig, ax = plt.subplots(figsize=(7,6))
@@ -97,6 +97,40 @@ def plot_trf_coef(coef:np.ndarray,
     ax.set_xlabel("Time (s)")
     ax.set_ylabel("Coefficient (A.U.)")
     
+    return ax
+
+def plot_trf_topo(coef:np.ndarray,
+                     times:np.ndarray,
+                     delays:tuple,
+                     eeg_info:mne.Info, 
+                     ):
+    delays_idx = np.arange(np.argmin(np.abs(delays[0] - times)), 
+                        np.argmin(np.abs(delays[1] - times)))
+    coef = np.mean(coef[:,delays_idx], axis=1)
+    vlim = (-np.abs(coef).max(), np.abs(coef).max())
+
+    if set(['FPz', 'Oz', 'T7', 'T8']) <= set(eeg_info['ch_names']):
+        sphere = 'eeglab'
+    else:
+        sphere = 'auto'
+
+    fig, ax = plt.subplots(figsize=(6,6))
+    score_topography, _ = plot_topomap(coef, 
+                                    pos=eeg_info,
+                                    show=False,
+                                    vlim=vlim,
+                                    sphere=sphere,
+                                    axes=ax
+                                    )
+    plt.colorbar(score_topography, 
+                 label='coefficient (A.U.)', 
+                 orientation='vertical', 
+                 shrink=0.5,
+                 ticks=[vlim[0], 0, vlim[1]],
+                 ax=ax
+                 )
+    ax.set_title(f"TRF Coefficients between delays {delays}")
+
     return ax
 
 def plot_lambda_optimization(optimization_result:pd.DataFrame):
@@ -116,28 +150,29 @@ def plot_lambda_optimization(optimization_result:pd.DataFrame):
 
     return optimization_plot
 
-def plot_topo(data:np.ndarray, 
-            eeg_info:mne.Info, 
-            type:str=None
-            ):
-    if type == 'corrcoef':
-        vlim = (-0.1,0.1)
-        ticks = [-0.1, 0, 0.1]
-    elif type == 'r2':
-        vlim = (0,1)
-        ticks = [0, 0.5, 1]
-    elif type == 'coef':
-        vlim = (-0.05, 0.05)
-        ticks = [-0.05, 0, 0.05]
+def plot_scores_topo(scores, 
+                     eeg_info:mne.Info, 
+                     scoring:str='corrcoef',
+                     vlim:tuple=None
+                     ):
+    if vlim is None:
+        if scoring == 'corrcoef':
+            vlim = (-0.1,0.1)
+        elif scoring == 'r2':
+            vlim = (0,1)
+    
+    if set(['FPz', 'Oz', 'T7', 'T8']) <= set(eeg_info['ch_names']):
+        sphere = 'eeglab'
     else:
-        vlim = (None, None)
-        ticks = None
+        sphere = 'auto'
+
     fig, ax = plt.subplots(figsize=(6,6))
     score_topography, _ = plot_topomap(data, 
                                     pos=eeg_info,
                                     show=False,
                                     vlim=vlim,
-                                    sphere='eeglab',
+                                    cmap='RdBu_r',
+                                    sphere=sphere,
                                     axes=ax
                                     )
     plt.colorbar(score_topography, 

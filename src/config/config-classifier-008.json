@@ -1,0 +1,10 @@
+{
+  "config_id_trf": "trf-003",
+  "model_name": "random-forest",
+  "params": {
+    "n_estimators": [100, 200, 300, 400, 500],
+    "criterion": ["gini"],
+    "max_depth": [2, 4, 6, 8, 10],
+    "max_features": ["sqrt"]
+  }
+}

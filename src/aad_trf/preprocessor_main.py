@@ -34,7 +34,7 @@ plt.close()
 config_id_eeg = config['preprocess-eeg']['config_id']
 config_eeg = load_config(config_id_eeg)
 eeg_preprocessor = EEG_Preprocessor(config_eeg)
-epochs = eeg_preprocessor.load_epochs(path_dict['epochs'])
+epochs = eeg_preprocessor.load_epochs(path_dict['epochs'], interpolate_bads=True)
 epochs = eeg_preprocessor.run(epochs)
 epochs_filename = f"dataset-{dataset_name}_data-eeg_config-{config_id_eeg}_-epo"
 epochs.save(os.path.join(path_dict['features'], f"{epochs_filename}.fif"), overwrite=True)

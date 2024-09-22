@@ -3,6 +3,7 @@
 /data/features/*.npy
 /data/features/*.pkl
 /data/updown-nh*/*
+/data/updown-ci*/*
 
 # Ignore files inside the models folder
 /models/*.pkl
@@ -11,7 +12,8 @@
 /reports/*.csv
 /reports/*.png
 
-.vscode
+# vscode configuration
+.vscode/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

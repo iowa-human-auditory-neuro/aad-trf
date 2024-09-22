@@ -1,10 +1,10 @@
 {
-  "dataset": "updown-nh",
+  "dataset": "updown-ci",
   "config_id_audio": "audio-001",
-  "config_id_eeg": "eeg-001",
+  "config_id_eeg": "eeg-002",
   "normalize": "True",
-  "direction": "backward",
-  "delays": [-0.4,0.0],
+  "direction": "forward",
+  "delays": [0,0.4],
   "search_space": [-2, 9, 12],
   "n_folds": 10,
   "scoring": "corrcoef"
