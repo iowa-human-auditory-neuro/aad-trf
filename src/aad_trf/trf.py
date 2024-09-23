@@ -194,10 +194,15 @@ class TRF:
         elif plot_type == 'hp-tuning':
             ax = plot_lambda_optimization(self._optimization_result)
         elif plot_type == 'prediction':
-            ax = plot_eeg_prediction(dataset, 
-                                     self.predict(dataset),
-                                     plot_channels=plot_channels
-                                     )
+            prediction = self.predict(dataset)
+            if self.direction == 'forward':
+                ax = plot_eeg_prediction(dataset,
+                                    prediction,
+                                    plot_channels=plot_channels,
+                                    scaling_factor=1.5
+                                    )
+            elif self.direction == 'backward':
+                ax = plot_audio_prediction(dataset, prediction)
         else:
             raise ValueError(f"Invalid plot type {plot_type}")
         
