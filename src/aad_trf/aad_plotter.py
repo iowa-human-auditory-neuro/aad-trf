@@ -264,7 +264,7 @@ def plot_importance(importance:np.ndarray,
     importance_half_idx = len(importance) // 2
     importance_up = importance[:importance_half_idx]
     importance_down = importance[importance_half_idx:]
-    vlim = (-np.abs(importance).max(), np.abs(importance).max())
+    vlim = (0, importance.max())
 
     if set(['FPz', 'Oz', 'T7', 'T8']) <= set(eeg_info['ch_names']):
         sphere = 'eeglab'

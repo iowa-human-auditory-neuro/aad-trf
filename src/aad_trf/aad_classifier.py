@@ -79,7 +79,7 @@ class AAD_Classifier:
     
     def get_feature_importance(self):
         if self.model_name == "logistic-regression":
-            return self.model.coef_.squeeze()
+            return np.abs(self.model.coef_).squeeze()
         elif self.model_name == "random-forest":
             return self.model.feature_importances_.squeeze()
         else:
