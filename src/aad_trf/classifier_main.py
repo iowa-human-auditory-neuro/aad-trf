@@ -86,7 +86,7 @@ for file in files:
     importances = clf.get_feature_importance()
     ax = plot_importance(importances, 
                             dataset.eeg_info)
-    plt.savefig(os.path.join(path_dict['reports'], f"dataset-{dataset_name}_reports-feature-importance_models-{model_name}_config-{config_id}_sub-{test_sub_id}.png"))
+    plt.savefig(os.path.join(path_dict['reports'], f"dataset-{dataset_name}_reports-feature-importance_models-{model_name}_config-{config_id}_sub-{test_sub_id}.svg"))
     
     if importances is not None:
         feature_names = [ch + "_up" for ch in dataset.eeg_channels] + [ch + "_down" for ch in dataset.eeg_channels]
