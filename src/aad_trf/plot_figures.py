@@ -12,12 +12,15 @@ from utils import *
 plt.rcParams['pdf.fonttype'] = 42
 plt.rcParams['ps.fonttype'] = 42
 
-config_ids = ["trf-004"]
+config_ids = ["trf-003", "trf-004"]
 plot_channels = ['FCz']
 time_step = 0.1
+plot_delays = (0.075, 0.125)
+plot_delay = (plot_delays[0] + plot_delays[1]) / 2
 
 coefs_nh = np.array([])
 coefs_ci = np.array([])
+eeg_info_array = []
 for config_id in config_ids:
     config = load_config(config_id)
     dataset_name = config['dataset']
@@ -25,10 +28,11 @@ for config_id in config_ids:
     path_dict = set_paths_from_config(base_path, config)
 
     files = glob.glob(f"{path_dict['models']}/dataset-{dataset_name}_models-trf_config-{config_id}_sub-*.pkl")
-    files.sort()
+    files.sort()    
 
     scores_mean = None
     prediction = []
+    coefs = None
     for file in files:
         filename = os.path.basename(file).split(".")[0]
         test_sub_id = get_field_from_filename(filename, "sub")
@@ -39,15 +43,29 @@ for config_id in config_ids:
 
         trf = TRF.load(file)
         coef = trf.get_model_coef()
-        coef = select_channels(coef, plot_channels, dataset)
-        coef = coef.squeeze()
-
-        if config_id == "trf-001":
-            coefs_nh = np.append(coefs_nh, coef)
-            coefs_nh = coefs_nh.reshape(-1, len(coef))
+        ax = plot_trf_topo(coef,
+                        times=trf.get_delays_in_sec(),
+                        delays=plot_delays,
+                        eeg_info=dataset.eeg_info
+                        )
+        plt.savefig(f"{path_dict['reports']}/dataset-{dataset_name}_reports-trf-coef-topo-{plot_delay}_config-{config_id}_sub-{test_sub_id}.svg",
+                transparent=True)
+        plt.close()
+        
+        if coefs is None:
+            coefs = coef
         else:
-            coefs_ci = np.append(coefs_ci, coef)
-            coefs_ci = coefs_ci.reshape(-1, len(coef))
+            coefs += coef
+
+        coef_selected_channel = select_channels(coef, plot_channels, dataset)
+        coef_selected_channel = coef_selected_channel.squeeze()
+
+        if config_id == "trf-004":
+            coefs_nh = np.append(coefs_nh, coef_selected_channel)
+            coefs_nh = coefs_nh.reshape(-1, len(coef_selected_channel))
+        else:
+            coefs_ci = np.append(coefs_ci, coef_selected_channel)
+            coefs_ci = coefs_ci.reshape(-1, len(coef_selected_channel))
 
         features = dataset.get_features()
         features = features.reshape(features.shape[0],2,-1)
@@ -68,6 +86,16 @@ for config_id in config_ids:
         #                  dataset.eeg_info,
         #                  vlim=vlim
         #                  )
+    
+    coefs /= len(files)
+    coefs = np.array(coefs)
+    ax = plot_trf_topo(coefs,
+                        times=trf.get_delays_in_sec(),
+                        delays=plot_delays,
+                        eeg_info=dataset.eeg_info
+                        )
+    plt.savefig(f"{path_dict['reports']}/dataset-{dataset_name}_reports-trf-coef-topo-{plot_delay}_config-{config_id}_sub-average.svg",
+                transparent=True)
     
     scores_mean /= len(files)
     vlim = (-np.abs(scores_mean).max(), np.abs(scores_mean).max())
@@ -114,11 +142,10 @@ ax.legend()
 ax.set_title(f"TRF coefficients {plot_channels}")
 ax.set_xlabel("Time (s)")
 ax.set_ylabel("Coefficient (A.U.)")
-plt.savefig(f"{path_dict['reports']}/dataset-updown-nh-ci_reports-trf-coef-wave_config_sub-average.svg",
+plt.savefig(f"{path_dict['reports']}/dataset-updown-nh-ci_reports-trf-coef-wave_config-{config_ids[0]}-{config_ids[1]}_sub-average.svg",
             transparent=True)
 
-
-config_ids = ["classifier-004", "classifier-005", "classifier-006", "classifier-009"]
+config_ids = ["classifier-010", "classifier-011", "classifier-006", "classifier-009"]
 all_clf_results = []
 
 for config_id in config_ids:
@@ -170,5 +197,5 @@ ax.set_title("Classifier performance")
 ax.set_ylabel("Accuracy")
 ax.tick_params('y', labelsize=15)
 
-plt.savefig(os.path.join(path_dict['reports'], "all_clf_results.svg"),
+plt.savefig(os.path.join(path_dict['reports'], "all_clf_results_reref-avg.svg"),
             transparent=True)
