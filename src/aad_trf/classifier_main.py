@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 from aad_dataset import AAD_Dataset
 from aad_classifier import AAD_Classifier
-from aad_plotter import plot_clf_results
+from aad_plotter import plot_clf_results, plot_importance
 from utils import load_config, set_paths_from_config, get_field_from_filename
 
 parser = argparse.ArgumentParser()
@@ -34,6 +34,7 @@ clf_results = pd.DataFrame(columns=["test_sub_id",
                                     "precision", 
                                     "recall", 
                                     "f1"])
+feature_importance = pd.DataFrame()
 for file in files:
     filename = os.path.basename(file).split(".")[0]
     test_sub_id = get_field_from_filename(filename, "sub")
@@ -82,11 +83,25 @@ for file in files:
                     }
     clf_results = pd.concat([clf_results, pd.DataFrame([results_dict])])
 
+    importances = clf.get_feature_importance()
+    ax = plot_importance(importances, 
+                            dataset.eeg_info)
+    plt.savefig(os.path.join(path_dict['reports'], f"dataset-{dataset_name}_reports-feature-importance_models-{model_name}_config-{config_id}_sub-{test_sub_id}.svg"))
+    
+    if importances is not None:
+        feature_names = [ch + "_up" for ch in dataset.eeg_channels] + [ch + "_down" for ch in dataset.eeg_channels]
+        feature_importance_dict = {'test_sub_id': test_sub_id}
+        feature_importance_dict.update({feature_names[i]: importance for i, importance in enumerate(importances)})
+        feature_importance = pd.concat([feature_importance, pd.DataFrame([feature_importance_dict])])
+
 clf_results_by_trial_filename = f"dataset-{dataset_name}_reports-clf-results-by-trial_models-{model_name}_config-{config_id}"
 results_by_trial_full.to_csv(os.path.join(path_dict['reports'], f"{clf_results_by_trial_filename}.csv"))
 
 clf_results_filename = f"dataset-{dataset_name}_reports-clf-performance_models-{model_name}_config-{config_id}"
 clf_results.to_csv(os.path.join(path_dict['reports'], f"{clf_results_filename}.csv"))
+
+feature_importance_filename = f"dataset-{dataset_name}_reports-feature-importance_models-{model_name}_config-{config_id}"
+feature_importance.to_csv(os.path.join(path_dict['reports'], f"{feature_importance_filename}.csv"))
 
 # clf_results = pd.read_csv(os.path.join(results_path, f"classification_results_{config['model_name']}.csv"))
 ax = plot_clf_results(clf_results)
