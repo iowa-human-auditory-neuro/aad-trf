@@ -90,26 +90,23 @@ Configuration should be saved in the `src/config` folder in `.json` format. Belo
 >
 > ( ): optional field
 
-- Dataset name
-  - [task-name]-[subject-population]
-- Configuration file name
-  - `config-[configuration-id].json`
-  - configuration id: [processing_step]-[3-digit-number]
-- Data file
-  - `dataset-[dataset-name]_data-[data-type]_config-[configuration-id](_sub-[subject_id]).[file-extension]`
-  - Examples
-    - Preprocessed audio data: `dataset-[dataset-name]_data-audio_config-[configuration-id](_sub-[subject_id]).npy`
-    - Preprocessed eeg data: `dataset-[dataset-name]_data-eeg_config-[configuration-id](_sub-[subject-id])_-epo.fif`
-    - AAD dataset: `dataset-[dataset-name]_data-aad_config-[configuration-id](_sub-[subject-id]).pkl`
+### Dataset name
+- [task-name]-[subject-population]
+### Configuration file name
+- `config-[configuration-id].json`
+- configuration id: [processing_step]-[3-digit-number]
+### Data file
+- `dataset-[dataset-name]_data-[data-type]_config-[configuration-id](_sub-[subject_id]).[file-extension]`
+- Examples
+  - Preprocessed audio data: `dataset-[dataset-name]_data-audio_config-[configuration-id](_sub-[subject_id]).npy`
+  - Preprocessed eeg data: `dataset-[dataset-name]_data-eeg_config-[configuration-id](_sub-[subject-id])_-epo.fif`
+  - AAD dataset: `dataset-[dataset-name]_data-aad_config-[configuration-id](_sub-[subject-id]).pkl`
 
-- Models
-  - `dataset-[dataset-name]_models-[model_type]_config-[configuration-id](_sub-[subject-id]).pkl`
+### Models
+- `dataset-[dataset-name]_models-[model_type]_config-[configuration-id](_sub-[subject-id]).pkl`
 
-- Figures
-  -  `dataset-[dataset-name]_reports-[figure_type]_config-[configuration-id](_sub-[subject-id]).png`
+### Figures
+-  `dataset-[dataset-name]_reports-[figure_type]_config-[configuration-id](_sub-[subject-id]).png`
 
-- Results
-  - `dataset-[dataset-name]_reports-[result_type]_config-[configuration-id](_sub-[subject-id]).csv`
-
-
-
+### Results
+- `dataset-[dataset-name]_reports-[result_type]_config-[configuration-id](_sub-[subject-id]).csv`
