@@ -10,7 +10,7 @@ Date: 2024-06-25
 
 ---
 
-This module is made for auditory attention decoding (AAD) based on the temporal response function (TRF). It is mainly composed of 3 processes: 1) Audio & EEG preprocessing, 2) TRF modeling 3) Classification, and each process has its own moudle and corresponding main function (`preprocessor_main.py`, `trf_main.py`, `classifier_main.py`). 
+This module is made for auditory attention decoding (AAD) based on the temporal response function (TRF). It is mainly composed of 3 processes: 1) Audio & EEG preprocessing, 2) TRF modeling 3) Classification, and each process has its own module and corresponding main function (`preprocessor_main.py`, `trf_main.py`, `classifier_main.py`). 
 
 
 ## Python Library Dependency
@@ -18,7 +18,7 @@ This module is made for auditory attention decoding (AAD) based on the temporal 
 - mne
 - seaborn
 
-## Folder Sturcture
+## Folder Structure
 ```
 |-- data
 |   |-- [raw_dataset]
@@ -34,10 +34,10 @@ This module is made for auditory attention decoding (AAD) based on the temporal 
 
 ## Dataset
 
-To start the process, epoched EEG data and audio file is required. EEG data should be saved in the `data/[raw_datset]/epochs` folder as `.fif` file format; Audio data should be save in the `data/[raw_datset]/audio` folder as `.wav` file format. 
+To start the process, epoched EEG data and audio files are required. EEG data should be saved in the `data/[raw_datset]/eeg` folder as `.fif` file format; Audio data should be saved in the `data/[raw_datset]/audio` folder as `.wav` file format. 
 
 ## Configuration Parsing
-Configuration should be saved in the `src/config` folder as `.json` format. Below are the example of configuration files. Please refer to the description of individual class and methods for the possible options for each field.
+Configuration should be saved in the `src/config` folder in `.json` format. Below are examples of configuration files. Please refer to the description of individual classes and methods for the possible options for each field.
 
 ### Audio preprocessing
 
