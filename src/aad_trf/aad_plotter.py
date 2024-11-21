@@ -19,7 +19,7 @@ def select_channels(data:np.ndarray,
     elif all(channel in dataset.eeg_channels for channel in plot_channels):
         channel_idx = [dataset.eeg_channels.index(channel) for channel in plot_channels]
         data = data[channel_idx]
-    elif plot_channels == 'gfp':
+    elif plot_channels == ['gfp']:
         data = np.std(data, axis=0)
     else:
         raise ValueError(f"Invalid channel name {plot_channels}")
