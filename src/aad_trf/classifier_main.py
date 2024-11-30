@@ -85,11 +85,11 @@ for file in files:
     clf_results = pd.concat([clf_results, pd.DataFrame([results_dict])])
 
     importances = clf.get_feature_importance()
-    ax = plot_importance(importances, 
-                            dataset.eeg_info)
-    plt.savefig(os.path.join(path_dict['reports'], f"dataset-{dataset_name}_reports-feature-importance_models-{model_name}_config-{config_id}_sub-{test_sub_id}.svg"))
-    
     if importances is not None:
+        ax = plot_importance(importances, 
+                                dataset.eeg_info)
+        plt.savefig(os.path.join(path_dict['reports'], f"dataset-{dataset_name}_reports-feature-importance_models-{model_name}_config-{config_id}_sub-{test_sub_id}.svg"))
+        
         feature_names = [ch + "_up" for ch in dataset.eeg_channels] + [ch + "_down" for ch in dataset.eeg_channels]
         feature_importance_dict = {'test_sub_id': test_sub_id}
         feature_importance_dict.update({feature_names[i]: importance for i, importance in enumerate(importances)})
