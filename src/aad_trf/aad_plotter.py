@@ -42,7 +42,7 @@ def plot_audio_waveform(dataset:AAD_Dataset):
     fig.supxlabel("Time (s)")
     fig.suptitle("Audio waveform")
 
-    return axs
+    return fig, axs
 
 def plot_eeg_waveform(dataset:AAD_Dataset,
                       plot_channels:list=None
@@ -221,10 +221,10 @@ def plot_audio_prediction(dataset:AAD_Dataset,
     audio_down = audio_prediction[:,dataset.labels == 1,:].mean(axis=1)
     times = dataset.get_times()
     fig, axs = plot_audio_waveform(dataset)
-    axs[0].plot(times, audio_up, color='r', label="Predicted")
+    axs[0].plot(times, audio_up, color='r', linestyle='--', label="Predicted")
     axs[0].legend(loc='upper right')
     axs[0].set_title("Up")
-    axs[1].plot(times, audio_down, color='b', label="Predicted")
+    axs[1].plot(times, audio_down, color='b', linestyle='--', label="Predicted")
     axs[1].legend(loc='upper right')
     axs[1].set_title("Down")
     plt.setp(axs, ylabel="Amplitude (A.U.)")

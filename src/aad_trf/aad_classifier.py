@@ -3,6 +3,9 @@ import pandas as pd
 
 import pickle
 
+from sklearn.base import BaseEstimator, ClassifierMixin
+from scipy.special import softmax
+
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC, LinearSVC
@@ -12,6 +15,20 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 
 from aad_dataset import AAD_Dataset
+
+class CorrComparison(BaseEstimator, ClassifierMixin):
+    def __init__(self):
+        pass
+
+    def fit(self, X, y):
+        # No fitting necessary for this simple classifier
+        return self
+
+    def predict(self, X):
+        return np.array(X[:, 0] - X[:, 1] < 0, dtype=int) # up: 0 or False, down: 1 or True
+    
+    def predict_proba(self, X):
+        return softmax(X, axis=1)
 
 class AAD_Classifier:
     def __init__(self, model_name, model=None, params=None):
@@ -27,6 +44,8 @@ class AAD_Classifier:
             self.model = SVC(kernel="linear", probability=True)
         elif self.model_name == "svc-rbf":
             self.model = SVC(kernel="rbf", probability=True)
+        elif self.model_name == "corr-comparison":
+            self.model = CorrComparison()
         else:
             raise ValueError("Invalid classifier name")
         print("Classifier:", self.model_name)
@@ -124,7 +143,7 @@ class AAD_Classifier:
                                             "f1"])
         feature_importance = pd.DataFrame()
         for file in files:
-            filename = file.split("/")[-1].split(".")[0]
+            filename = os.path.basename(file).split(".")[0]
             test_sub_id = get_field_from_filename(filename, "sub")
             print(f"Test subject: {test_sub_id}")
             dataset = AAD_Dataset.load_from_file(file)
@@ -133,13 +152,14 @@ class AAD_Classifier:
             test_dataset = dataset[dataset.sub_ids == test_sub_id]
             print(train_dataset.features.shape, test_dataset.features.shape)
 
-            clf = AAD_Classifier(model_name=config['model_name'])
-            # clf = clf.load(os.path.join(path_dict['models'], f"dataset-{dataset_name}_models-{model_name}_config-{config_id}_sub-{test_sub_id}.pkl"))
-            optimization_results = clf.optimize_hyperparmeters(train_dataset, n_splits=10)
-            optimization_results_filename = f"dataset-{dataset_name}_reports-clf-optimization_models-{model_name}_config-{config_id}_sub-{test_sub_id}"
-            optimization_results.to_csv(os.path.join(path_dict['reports'], f"{optimization_results_filename}.csv"))
+            clf = AAD_Classifier(model_name=config['model_name'],
+                                params = config['params'])
+            if clf.model_name != "corr-comparison":
+                optimization_results = clf.optimize_hyperparmeters(train_dataset, n_splits=10)
+                optimization_results_filename = f"dataset-{dataset_name}_reports-clf-optimization_models-{model_name}_config-{config_id}_sub-{test_sub_id}"
+                optimization_results.to_csv(os.path.join(path_dict['reports'], f"{optimization_results_filename}.csv"))
 
-            clf.train(train_dataset)
+                clf.train(train_dataset)
 
             sub_ids = test_dataset.sub_ids
             trial = np.arange(1, len(test_dataset)+1)
