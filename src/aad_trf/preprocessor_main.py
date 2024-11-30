@@ -8,18 +8,20 @@ from eeg_preprocessor import EEG_Preprocessor
 from utils import load_config, set_paths_from_config
 
 parser = argparse.ArgumentParser(description="Preprocess audio and eeg files")
-parser.add_argument("--config_id", type=str, default="exp-004", help="Configuration ID")
-args = parser.parse_args()
-config_id = args.config_id
+parser.add_argument("--dataset", type=str, default="updown-nh", help="dataset name")
+parser.add_argument("--config_id_audio", type=str, default="audio-001", help="Configuration ID of audio")
+parser.add_argument("--config_id_eeg", type=str, default="eeg-001", help="Configuration ID of eeg")
 
-config = load_config(config_id)
-config_id_audio = config['preprocess-audio']['config_id']
-config_audio = load_config(config_id_audio)
+args = parser.parse_args()
+config_id_audio = args.config_id_audio
+config_id_eeg = args.config_id_eeg
+dataset_name = args.dataset
+config = {'dataset': dataset_name}
 
 base_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 path_dict = set_paths_from_config(base_path, config)
-dataset_name = config['dataset']
 
+config_audio = load_config(config_id_audio)
 audio_preprocessor = AudioPreprocessor(config_audio)
 audio_array, sfreq_audio = audio_preprocessor.load_audio_data(path_dict['audio'])
 audio = audio_preprocessor.run(audio_array)
@@ -31,10 +33,9 @@ np.save(os.path.join(path_dict['features'], f"{audio_filename}.npy"), audio)
 plt.savefig(os.path.join(path_dict['reports'], f"{fig_filename_audio}.png"))
 plt.close()
 
-config_id_eeg = config['preprocess-eeg']['config_id']
 config_eeg = load_config(config_id_eeg)
 eeg_preprocessor = EEG_Preprocessor(config_eeg)
-epochs = eeg_preprocessor.load_epochs(path_dict['epochs'])
+epochs = eeg_preprocessor.load_epochs(path_dict['epochs'], interpolate_bads=True)
 epochs = eeg_preprocessor.run(epochs)
 epochs_filename = f"dataset-{dataset_name}_data-eeg_config-{config_id_eeg}_-epo"
 epochs.save(os.path.join(path_dict['features'], f"{epochs_filename}.fif"), overwrite=True)

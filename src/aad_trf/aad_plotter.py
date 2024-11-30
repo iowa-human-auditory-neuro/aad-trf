@@ -33,8 +33,8 @@ def plot_audio_waveform(dataset:AAD_Dataset):
     times = dataset.get_times()
 
     fig, axs = plt.subplots(2,1,figsize=(6,6))
-    axs[0].plot(times, audio_up, color='b')
-    axs[1].plot(times, audio_down, color='r')
+    axs[0].plot(times, audio_up, color='r', label="True")
+    axs[1].plot(times, audio_down, color='b', label="True")
     plt.setp(axs, xlim=(times[0], times[-1]))
     plt.setp(axs, ylabel="Amplitude (A.U.)")
     axs[0].set_title("Up")
@@ -42,7 +42,7 @@ def plot_audio_waveform(dataset:AAD_Dataset):
     fig.supxlabel("Time (s)")
     fig.suptitle("Audio waveform")
 
-    return axs
+    return fig, axs
 
 def plot_eeg_waveform(dataset:AAD_Dataset,
                       plot_channels:list=None
@@ -74,7 +74,7 @@ def plot_eeg_waveform(dataset:AAD_Dataset,
 
     return fig, axs
 
-def plot_trf_coef(coef:np.ndarray,
+def plot_trf_waveform(coef:np.ndarray,
                   times:np.ndarray,
                   delays:tuple,
                   dataset:AAD_Dataset,
@@ -82,7 +82,7 @@ def plot_trf_coef(coef:np.ndarray,
                   time_step=0.1
                   ):
     coef = select_channels(coef, plot_channels, dataset)
-    coef = coef.squeeze()
+    # coef = coef.squeeze()
     coef = coef.T
 
     fig, ax = plt.subplots(figsize=(7,6))
@@ -97,6 +97,40 @@ def plot_trf_coef(coef:np.ndarray,
     ax.set_xlabel("Time (s)")
     ax.set_ylabel("Coefficient (A.U.)")
     
+    return ax
+
+def plot_trf_topo(coef:np.ndarray,
+                     times:np.ndarray,
+                     delays:tuple,
+                     eeg_info:mne.Info, 
+                     ):
+    delays_idx = np.arange(np.argmin(np.abs(delays[0] - times)), 
+                        np.argmin(np.abs(delays[1] - times)))
+    coef = np.mean(coef[:,delays_idx], axis=1)
+    vlim = (-np.abs(coef).max(), np.abs(coef).max())
+
+    if set(['FPz', 'Oz', 'T7', 'T8']) <= set(eeg_info['ch_names']):
+        sphere = 'eeglab'
+    else:
+        sphere = 'auto'
+
+    fig, ax = plt.subplots(figsize=(6,6))
+    score_topography, _ = plot_topomap(coef, 
+                                    pos=eeg_info,
+                                    show=False,
+                                    vlim=vlim,
+                                    sphere=sphere,
+                                    axes=ax
+                                    )
+    plt.colorbar(score_topography, 
+                 label='coefficient (A.U.)', 
+                 orientation='vertical', 
+                 shrink=0.5,
+                 ticks=[vlim[0], 0, vlim[1]],
+                 ax=ax
+                 )
+    ax.set_title(f"TRF Coefficients between delays {delays}")
+
     return ax
 
 def plot_lambda_optimization(optimization_result:pd.DataFrame):
@@ -118,18 +152,27 @@ def plot_lambda_optimization(optimization_result:pd.DataFrame):
 
 def plot_scores_topo(scores, 
                      eeg_info:mne.Info, 
-                     scoring:str='corrcoef'
+                     scoring:str='corrcoef',
+                     vlim:tuple=None
                      ):
-    if scoring == 'corrcoef':
-        vlim = (-0.1,0.1)
-    elif scoring == 'r2':
-        vlim = (0,1)
+    if vlim is None:
+        if scoring == 'corrcoef':
+            vlim = (-0.1,0.1)
+        elif scoring == 'r2':
+            vlim = (0,1)
+    
+    if set(['FPz', 'Oz', 'T7', 'T8']) <= set(eeg_info['ch_names']):
+        sphere = 'eeglab'
+    else:
+        sphere = 'auto'
+
     fig, ax = plt.subplots(figsize=(6,6))
     score_topography, _ = plot_topomap(scores, 
                                     pos=eeg_info,
                                     show=False,
                                     vlim=vlim,
-                                    sphere='eeglab',
+                                    cmap='RdBu_r',
+                                    sphere=sphere,
                                     axes=ax
                                     )
     plt.colorbar(score_topography, 
@@ -169,6 +212,26 @@ def plot_eeg_prediction(dataset:AAD_Dataset,
 
     return axs
 
+def plot_audio_prediction(dataset:AAD_Dataset,
+                          audio_prediction:np.ndarray,
+                          scaling_factor=20
+                          ):
+    audio_prediction *= scaling_factor
+    audio_up = audio_prediction[:,dataset.labels == 0,:].mean(axis=1)
+    audio_down = audio_prediction[:,dataset.labels == 1,:].mean(axis=1)
+    times = dataset.get_times()
+    fig, axs = plot_audio_waveform(dataset)
+    axs[0].plot(times, audio_up, color='r', linestyle='--', label="Predicted")
+    axs[0].legend(loc='upper right')
+    axs[0].set_title("Up")
+    axs[1].plot(times, audio_down, color='b', linestyle='--', label="Predicted")
+    axs[1].legend(loc='upper right')
+    axs[1].set_title("Down")
+    plt.setp(axs, ylabel="Amplitude (A.U.)")
+    fig.suptitle("Averaged True and Predicted audio waveform")
+
+    return axs
+
 def plot_clf_results(clf_results:pd.DataFrame):
     fig, ax = plt.subplots(figsize=(6,8))
     ax = sns.stripplot(data=clf_results, 
@@ -194,6 +257,46 @@ def plot_clf_results(clf_results:pd.DataFrame):
     ax.set_ylabel("Accuracy")
 
     return ax
+
+def plot_importance(importance:np.ndarray,
+                    eeg_info:mne.Info, 
+                    ):
+    importance_half_idx = len(importance) // 2
+    importance_up = importance[:importance_half_idx]
+    importance_down = importance[importance_half_idx:]
+    vlim = (0, importance.max())
+
+    if set(['FPz', 'Oz', 'T7', 'T8']) <= set(eeg_info['ch_names']):
+        sphere = 'eeglab'
+    else:
+        sphere = 'auto'
+
+    fig, axs = plt.subplots(1,2,figsize=(6,4))
+    score_topography, _ = plot_topomap(importance_up, 
+                                    pos=eeg_info,
+                                    show=False,
+                                    vlim=vlim,
+                                    sphere=sphere,
+                                    axes=axs[0]
+                                    )
+    axs[0].set_title("Up")
+    score_topography, _ = plot_topomap(importance_down, 
+                                    pos=eeg_info,
+                                    show=False,
+                                    vlim=vlim,
+                                    sphere=sphere,
+                                    axes=axs[1]
+                                    )
+    axs[1].set_title("Down")
+    fig.colorbar(score_topography, 
+                 orientation='vertical', 
+                 shrink=0.5,
+                 ticks=[vlim[0], 0, vlim[1]],
+                 ax=axs
+                 )
+    fig.suptitle("Feature importance across channels")
+
+    return axs
 
 if __name__ == '__main__':
     pass
