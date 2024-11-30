@@ -46,11 +46,12 @@ for file in files:
 
     clf = AAD_Classifier(model_name=config['model_name'],
                          params = config['params'])
-    optimization_results = clf.optimize_hyperparmeters(train_dataset, n_splits=10)
-    optimization_results_filename = f"dataset-{dataset_name}_reports-clf-optimization_models-{model_name}_config-{config_id}_sub-{test_sub_id}"
-    optimization_results.to_csv(os.path.join(path_dict['reports'], f"{optimization_results_filename}.csv"))
+    if clf.model_name != "corr-comparison":
+        optimization_results = clf.optimize_hyperparmeters(train_dataset, n_splits=10)
+        optimization_results_filename = f"dataset-{dataset_name}_reports-clf-optimization_models-{model_name}_config-{config_id}_sub-{test_sub_id}"
+        optimization_results.to_csv(os.path.join(path_dict['reports'], f"{optimization_results_filename}.csv"))
 
-    clf.train(train_dataset)
+        clf.train(train_dataset)
 
     sub_ids = test_dataset.sub_ids
     trial = np.arange(1, len(test_dataset)+1)
