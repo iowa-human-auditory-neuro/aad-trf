@@ -41,9 +41,6 @@ search_space = np.logspace(config['search_space'][0],
 prediction = []
 
 for i, (train_index, test_index) in enumerate(cv.split(dataset.labels, groups=groups)):
-    if i < 33:
-        continue
-    
     train_dataset = dataset[train_index]
     test_dataset = dataset[test_index]
     test_sub_id = test_dataset.sub_ids[0]
