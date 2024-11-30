@@ -11,6 +11,7 @@ parser = argparse.ArgumentParser(description="Preprocess audio and eeg files")
 parser.add_argument("--dataset", type=str, default="updown-nh", help="dataset name")
 parser.add_argument("--config_id_audio", type=str, default="audio-001", help="Configuration ID of audio")
 parser.add_argument("--config_id_eeg", type=str, default="eeg-001", help="Configuration ID of eeg")
+
 args = parser.parse_args()
 config_id_audio = args.config_id_audio
 config_id_eeg = args.config_id_eeg
