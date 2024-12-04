@@ -101,8 +101,9 @@ results_by_trial_full.to_csv(os.path.join(path_dict['reports'], f"{clf_results_b
 clf_results_filename = f"dataset-{dataset_name}_reports-clf-performance_models-{model_name}_config-{config_id}"
 clf_results.to_csv(os.path.join(path_dict['reports'], f"{clf_results_filename}.csv"))
 
-feature_importance_filename = f"dataset-{dataset_name}_reports-feature-importance_models-{model_name}_config-{config_id}"
-feature_importance.to_csv(os.path.join(path_dict['reports'], f"{feature_importance_filename}.csv"))
+if importances is not None:
+    feature_importance_filename = f"dataset-{dataset_name}_reports-feature-importance_models-{model_name}_config-{config_id}"
+    feature_importance.to_csv(os.path.join(path_dict['reports'], f"{feature_importance_filename}.csv"))
 
 # clf_results = pd.read_csv(os.path.join(results_path, f"classification_results_{config['model_name']}.csv"))
 ax = plot_clf_results(clf_results)

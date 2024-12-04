@@ -93,7 +93,11 @@ class AAD_Classifier:
             raise ValueError(f"Invalid scoring method {scoring}")
     
     def predict(self, dataset:AAD_Dataset):
-        X = dataset.get_features(normalize=True)
+        if self.model_name != "corr-comparison":
+            normalize = False
+        else:
+            normalize = True
+        X = dataset.get_features(normalize=normalize)
         return self.model.predict(X)
     
     def get_feature_importance(self):
