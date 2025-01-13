@@ -6,7 +6,7 @@ Author: Jusung Ham
 
 Contact: jusung-ham@uiowa.edu
 
-Date: 2024-06-25
+Date: 2025-01-13
 
 ---
 
@@ -17,6 +17,8 @@ This module is made for auditory attention decoding (AAD) based on the temporal 
 
 - mne
 - seaborn
+
+Please follow the instruction from [mne documentation page](https://mne.tools/stable/install/manual_install.html#manual-install) to install the MNE-Python package.
 
 ## Folder Structure
 ```
