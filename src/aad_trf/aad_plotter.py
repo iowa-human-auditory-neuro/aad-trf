@@ -5,7 +5,7 @@ import seaborn as sns
 import mne
 from mne.viz import plot_topomap
 
-from aad_dataset import AAD_Dataset
+from aad_trf.aad_dataset import AAD_Dataset
 
 def select_channels(data:np.ndarray,
                     plot_channels:list,
