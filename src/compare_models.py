@@ -40,28 +40,40 @@ def plot_butterfly(epochs_correct, epochs_incorrect, ylim:dict=None, save=False)
     return fig, axs
 
 def plot_correct_incorrect(epochs_correct, epochs_incorrect, 
-                           channel=['FCz'], ylim=None, save=False):
+                           channel=['FCz'], ylim=[-1.6e-6, 1.6e-6], save=False):
     if type(channel) == str:
         channel = [channel]
+    up_onsets = np.linspace(0,4,6)
+    up_onsets = up_onsets[1:-1]
+    down_onsets = np.linspace(0,4,5)
+    down_onsets = down_onsets[1:-1]
     fig, axs = plt.subplots(2, 1, figsize=(12, 6))
-    for ax, label in zip(axs, ['up', 'down']):
-        evoked_correct_fcz = epochs_correct[label].average().pick_channels(channel)
-        se_correct_fcz = epochs_correct[label].standard_error().pick_channels(channel)
+    for ax, cond in zip(axs, ['up', 'down']):
+        evoked_correct_fcz = epochs_correct[cond].average().pick(channel)
+        se_correct_fcz = epochs_correct[cond].standard_error().pick(channel)
         ax.plot(evoked_correct_fcz.times, evoked_correct_fcz.data.squeeze(), color='green', label='Correct')
         ax.fill_between(evoked_correct_fcz.times, evoked_correct_fcz.data.squeeze() - se_correct_fcz.data.squeeze(),
                         evoked_correct_fcz.data.squeeze() + se_correct_fcz.data.squeeze(), color='green', alpha=0.2)
-        evoked_incorrect_fcz = epochs_incorrect[label].average().pick_channels(channel)
-        se_incorrect_fcz = epochs_incorrect[label].standard_error().pick_channels(channel)
+        evoked_incorrect_fcz = epochs_incorrect[cond].average().pick(channel)
+        se_incorrect_fcz = epochs_incorrect[cond].standard_error().pick(channel)
         ax.plot(evoked_incorrect_fcz.times, evoked_incorrect_fcz.data.squeeze(), color='orange', label='Incorrect')
         ax.fill_between(evoked_incorrect_fcz.times, evoked_incorrect_fcz.data.squeeze() - se_incorrect_fcz.data.squeeze(),
                         evoked_incorrect_fcz.data.squeeze() + se_incorrect_fcz.data.squeeze(), color='orange', alpha=0.2)
 
-        for up_onset in np.linspace(0,4,6):
-            ax.axvline(up_onset, color='r', linestyle='--')
-        for down_onset in np.linspace(0,4,5):
-            ax.axvline(down_onset, color='b', linestyle='--')
+        # Plot vertical lines with condition-dependent styles
+        if cond == 'up':
+            ax.vlines(up_onsets, ymin=ylim[0], ymax=ylim[1], 
+                     colors='r', linestyles='--')  # dashed for matching condition
+            ax.vlines(down_onsets, ymin=ylim[0], ymax=ylim[1], 
+                     colors='b', linestyles=':')   # dotted for other condition
+        else:  # cond == 'down'
+            ax.vlines(up_onsets, ymin=ylim[0], ymax=ylim[1], 
+                     colors='r', linestyles=':')   # dotted for other condition
+            ax.vlines(down_onsets, ymin=ylim[0], ymax=ylim[1], 
+                     colors='b', linestyles='--')  # dashed for matching condition
+        
         ax.axvline(0, color='k', linestyle='--')
-        ax.set_title(f'{label.capitalize()}')
+        ax.set_title(f'{cond.capitalize()}')
         ax.set_xlim(epochs_correct.tmin, epochs_correct.tmax)
         ax.set_ylim(ylim)
         ax.set_ylabel('Amplitude (uV)')
