@@ -63,7 +63,7 @@ def plot_correct_incorrect(epochs_correct, epochs_incorrect,
         ax.axvline(0, color='k', linestyle='--')
         ax.set_title(f'{label.capitalize()}')
         ax.set_xlim(epochs_correct.tmin, epochs_correct.tmax)
-        ax.set_ylim = ylim
+        ax.set_ylim(ylim)
         ax.set_ylabel('Amplitude (uV)')
         ax.set_xlabel('Time (s)')
         ax.legend()
