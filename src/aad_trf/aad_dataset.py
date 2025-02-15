@@ -79,7 +79,8 @@ class AAD_Dataset:
         return attended_audio
     
     def get_times(self, start_time:float=0.5):
-        return (np.arange(self.audio.shape[-1]) / self.sfreq) + start_time
+        # return (np.arange(self.audio.shape[-1]) / self.sfreq) + start_time
+        return self.times
     
     def get_audio(self, 
                   attended=False,
