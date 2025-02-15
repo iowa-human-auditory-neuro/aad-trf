@@ -8,9 +8,9 @@ from eeg_preprocessor import EEG_Preprocessor
 from utils import load_config, set_paths_from_config
 
 parser = argparse.ArgumentParser(description="Preprocess audio and eeg files")
-parser.add_argument("--dataset", type=str, default="updown-nh", help="dataset name")
-parser.add_argument("--config_id_audio", type=str, default="audio-001", help="Configuration ID of audio")
-parser.add_argument("--config_id_eeg", type=str, default="eeg-001", help="Configuration ID of eeg")
+parser.add_argument("--dataset", type=str, default="updown-ci", help="dataset name")
+parser.add_argument("--config_id_audio", type=str, default="audio-002", help="Configuration ID of audio")
+parser.add_argument("--config_id_eeg", type=str, default="eeg-003", help="Configuration ID of eeg")
 
 args = parser.parse_args()
 config_id_audio = args.config_id_audio
@@ -37,6 +37,7 @@ config_eeg = load_config(config_id_eeg)
 eeg_preprocessor = EEG_Preprocessor(config_eeg)
 epochs = eeg_preprocessor.load_epochs(path_dict['epochs'], interpolate_bads=True)
 epochs = eeg_preprocessor.run(epochs)
+epochs = epochs.shift_time(-0.5, relative=True)
 epochs_filename = f"dataset-{dataset_name}_data-eeg_config-{config_id_eeg}_-epo"
 epochs.save(os.path.join(path_dict['features'], f"{epochs_filename}.fif"), overwrite=True)
 print(epochs)
