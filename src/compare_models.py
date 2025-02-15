@@ -74,6 +74,64 @@ def plot_correct_incorrect(epochs_correct, epochs_incorrect,
     
     return fig, axs
 
+def plot_gfp(epochs_correct, epochs_incorrect, ylim=None, save=False):
+    """Plot Global Field Power for correct and incorrect trials
+    
+    Args:
+        epochs_correct (mne.Epochs): Epochs for correct trials
+        epochs_incorrect (mne.Epochs): Epochs for incorrect trials
+        ylim (tuple, optional): Y-axis limits. Defaults to None.
+        save (bool, optional): Save plot to file. Defaults to False.
+    
+    Returns:
+        tuple: (figure, axes)
+    """
+    up_onsets = np.linspace(0,4,6)
+    up_onsets = up_onsets[1:-1]
+    down_onsets = np.linspace(0,4,5)
+    down_onsets = down_onsets[1:-1]
+
+    fig, axs = plt.subplots(2, 1, figsize=(12, 6))
+    
+    for ax, cond in zip(axs, ['up', 'down']):
+        # Calculate GFP for correct trials
+        evoked_correct = epochs_correct[cond].average()
+        data_correct = np.std(evoked_correct.data, axis=0)
+        
+        # Calculate GFP for incorrect trials
+        evoked_incorrect = epochs_incorrect[cond].average()
+        data_incorrect = np.std(evoked_incorrect.data, axis=0)
+        
+        # Plot GFP
+        ax.plot(evoked_correct.times, data_correct, color='green', label='Correct')
+        ax.plot(evoked_incorrect.times, data_incorrect, color='orange', label='Incorrect')
+
+        # Plot vertical lines with condition-dependent styles
+        if cond == 'up':
+            ax.vlines(up_onsets, ymin=ylim[0], ymax=ylim[1], 
+                     colors='r', linestyles='--')  # dashed for matching condition
+            ax.vlines(down_onsets, ymin=ylim[0], ymax=ylim[1], 
+                     colors='b', linestyles=':')   # dotted for other condition
+        else:  # cond == 'down'
+            ax.vlines(up_onsets, ymin=ylim[0], ymax=ylim[1], 
+                     colors='r', linestyles=':')   # dotted for other condition
+            ax.vlines(down_onsets, ymin=ylim[0], ymax=ylim[1], 
+                     colors='b', linestyles='--')  # dashed for matching condition
+        ax.axvline(0, color='k', linestyle='--')
+
+        ax.set_title(f'{cond.capitalize()}')
+        ax.set_xlim(epochs_correct.tmin, epochs_correct.tmax)
+        ax.set_ylim(ylim)
+        ax.set_ylabel('GFP (µV)')
+        ax.set_xlabel('Time (s)')
+        ax.legend()
+
+    plt.tight_layout()
+    if save:
+        plt.savefig(os.path.join(base_path, 'reports', 'updown-ci_correct_incorrect_gfp.svg'))
+    
+    return fig, axs
+
 if __name__ == '__main__':
     base_path = "/Users/jusungham/HANG/aad-trf/"
     results = []
@@ -126,7 +184,7 @@ if __name__ == '__main__':
     epochs_incorrect.drop_bad(reject=dict(eeg=100e-6))
 
     fig1, axs1 = plot_butterfly(epochs_correct, epochs_incorrect, ylim=None, save=True)
-    fig2, axs2 = plot_correct_incorrect(epochs_correct, epochs_incorrect, channel=['FCz'], ylim=None, save=True)
-
+    fig2, axs2 = plot_correct_incorrect(epochs_correct, epochs_incorrect, channel=['FCz'], save=True)
+    fig3, axs3 = plot_gfp(epochs_correct, epochs_incorrect, ylim=[0,1e-6], save=True)
     # evoked = epochs_correct['up'].average()
     # evoked.plot_joint(times=[0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5], title='Correct Up', show=False)
