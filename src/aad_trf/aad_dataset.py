@@ -223,7 +223,7 @@ if __name__ == '__main__':
           )
     attended_audio = dataset.get_audio(attended=True)
     print(attended_audio.shape)
-    ax_audio = plot_audio_waveform(dataset)
+    # ax_audio = plot_audio_waveform(dataset)
     ax_eeg = plot_eeg_waveform(dataset)
 
     dataset_filename = f"dataset-{dataset_name}_data-aad_config-test_sub-all"
