@@ -145,57 +145,61 @@ ax.set_ylabel("Coefficient (A.U.)")
 plt.savefig(f"{path_dict['reports']}/dataset-updown-nh-ci_reports-trf-coef-wave_config-{config_ids[0]}-{config_ids[1]}_sub-average.svg",
             transparent=True)
 
-config_ids = ["classifier-010", "classifier-011", "classifier-006", "classifier-009"]
-all_clf_results = []
+def plot_clf_accuracy(config_ids):
+    all_clf_results = []
+    for config_id in config_ids:
+        config = load_config(config_id)
+        config_id_trf = config['config_id_trf']
+        config_trf = load_config(config_id_trf)
+        dataset_name = config_trf['dataset']
+        model_name = config['model_name']
 
-for config_id in config_ids:
-    config = load_config(config_id)
-    config_id_trf = config['config_id_trf']
-    config_trf = load_config(config_id_trf)
-    dataset_name = config_trf['dataset']
-    model_name = config['model_name']
+        base_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        path_dict = set_paths_from_config(base_path, config_trf)
+        
+        clf_results_filename = f"dataset-{dataset_name}_reports-clf-performance_models-{model_name}_config-{config_id}"
+        clf_results = pd.read_csv(os.path.join(path_dict['reports'], f"{clf_results_filename}.csv"))
 
-    base_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    path_dict = set_paths_from_config(base_path, config_trf)
-    
-    clf_results_filename = f"dataset-{dataset_name}_reports-clf-performance_models-{model_name}_config-{config_id}"
-    clf_results = pd.read_csv(os.path.join(path_dict['reports'], f"{clf_results_filename}.csv"))
+        print(f"Model: {model_name}, Dataset: {dataset_name}")
+        print(f"Accuracy: {clf_results['accuracy_test'].mean():.3f} +/- {clf_results['accuracy_test'].std():.3f}")
+        print(f"min: {clf_results['accuracy_test'].min():.3f}, max: {clf_results['accuracy_test'].max():.3f}")
 
-    print(f"Model: {model_name}, Dataset: {dataset_name}")
-    print(f"Accuracy: {clf_results['accuracy_test'].mean():.3f} +/- {clf_results['accuracy_test'].std():.3f}")
-    print(f"min: {clf_results['accuracy_test'].min():.3f}, max: {clf_results['accuracy_test'].max():.3f}")
+        clf_results['model_name'] = model_name
+        clf_results['dataset'] = dataset_name
+        all_clf_results.append(clf_results)
 
-    clf_results['model_name'] = model_name
-    clf_results['dataset'] = dataset_name
-    all_clf_results.append(clf_results)
+    all_clf_results_df = pd.concat(all_clf_results, ignore_index=True)
+    all_clf_results_df['dataset_model'] = all_clf_results_df['dataset'] + "_" + all_clf_results_df['model_name']
 
-all_clf_results_df = pd.concat(all_clf_results, ignore_index=True)
-all_clf_results_df['dataset_model'] = all_clf_results_df['dataset'] + "_" + all_clf_results_df['model_name']
+    fig, ax = plt.subplots(figsize=(10,8))
+    ax = sns.stripplot(data=all_clf_results_df, 
+                        x="dataset_model", 
+                        y="accuracy_test", 
+                        jitter=0.04, 
+                        color='k',
+                        marker='o',
+                        ax=ax
+                        )
+    ax = sns.boxplot(data=all_clf_results_df, 
+                        x="dataset_model", 
+                        y="accuracy_test", 
+                        width=0.4, 
+                        color='k',
+                        fill=False,
+                        # label=["NH-logistic", "NH-SVC", "CI-logistic", "CI-SVC"],
+                        ax=ax
+                        )
+    ax.axhline(0.5, color='gray', linestyle='--')
+    ax.grid(axis='y')
+    ax.set_ylim(0.2, 0.8)
+    ax.set_title("Classifier performance")
+    ax.set_ylabel("Accuracy")
+    ax.tick_params('y', labelsize=15)
 
-fig, ax = plt.subplots(figsize=(10,8))
-ax = sns.stripplot(data=all_clf_results_df, 
-                    x="dataset_model", 
-                    y="accuracy_test", 
-                    jitter=0.04, 
-                    color='k',
-                    marker='o',
-                    ax=ax
-                    )
-ax = sns.boxplot(data=all_clf_results_df, 
-                    x="dataset_model", 
-                    y="accuracy_test", 
-                    width=0.4, 
-                    color='k',
-                    fill=False,
-                    # label=["NH-logistic", "NH-SVC", "CI-logistic", "CI-SVC"],
-                    ax=ax
-                    )
-ax.axhline(0.5, color='gray', linestyle='--')
-ax.grid(axis='y')
-ax.set_ylim(0.2, 0.8)
-ax.set_title("Classifier performance")
-ax.set_ylabel("Accuracy")
-ax.tick_params('y', labelsize=15)
-
-plt.savefig(os.path.join(path_dict['reports'], "all_clf_results_reref-avg.svg"),
+    plt.savefig(os.path.join(path_dict['reports'], "all_clf_results_reref-avg.svg"),
             transparent=True)
+    
+    return all_clf_results_df
+
+config_ids = ["classifier-010", "classifier-011", "classifier-006", "classifier-009"]
+all_clf_results_df = plot_clf_accuracy(config_ids)
