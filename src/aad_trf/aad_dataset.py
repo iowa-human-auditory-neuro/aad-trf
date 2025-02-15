@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import pandas as pd
 import mne
 import pickle as pkl
 import matplotlib.pyplot as plt
@@ -124,7 +125,35 @@ class AAD_Dataset:
         print(f"Saving dataset to {path}")
         with open(path, "wb") as f:
             pkl.dump(self, f)
-    
+
+    def to_epochs(self) -> mne.Epochs:
+        """Convert AAD_Dataset to MNE Epochs object
+
+        Returns:
+            mne.Epochs: MNE Epochs object containing the EEG data
+        """
+        # Create events array
+        n_events = len(self)
+        events = np.zeros((n_events, 3), dtype=int)
+        events[:, 0] = np.arange(n_events)  # Sample indices
+        events[:, 2] = self.labels # Event IDs (0 for up, 1 for down)
+        
+        # Create Epochs object
+        epochs = mne.EpochsArray(
+            data=self.eeg,
+            info=self.eeg_info,
+            events=events,
+            tmin=self.times[0],
+            event_id={'up': 0, 'down': 1}
+        )
+        
+        # Add metadata
+        epochs.metadata = pd.DataFrame({
+            'sub_id': self.sub_ids
+        })
+        
+        return epochs
+
     @classmethod
     def load_from_file(cls, path:str):
         if not os.path.exists(path):
