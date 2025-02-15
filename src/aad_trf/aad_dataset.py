@@ -16,16 +16,18 @@ class AAD_Dataset:
                  features:np.ndarray=None,
                  sfreq:float=None, 
                  eeg_channels:list=None,
-                 eeg_info:mne.Info=None
+                 eeg_info:mne.Info=None,
+                 times:np.ndarray=None
                  ):
         self.eeg = eeg
         self.audio = audio
         self.labels = labels
         self.sub_ids = sub_ids
+        self.features = features
         self.sfreq = sfreq
         self.eeg_channels = eeg_channels
         self.eeg_info = eeg_info
-        self.features = features
+        self.times = times
     
     def __len__(self):
         return len(self.labels)
@@ -38,7 +40,8 @@ class AAD_Dataset:
                            self.features[idx],
                            self.sfreq,
                            self.eeg_channels,
-                           self.eeg_info
+                           self.eeg_info,
+                           self.times
                            )
     
     def create(self,
@@ -48,14 +51,15 @@ class AAD_Dataset:
         self.eeg = eeg_epochs.get_data()
         self._event_ids = eeg_epochs.events[:,2]
         self.audio = self.make_audio_array(audio)
-        self.sfreq = eeg_epochs.info['sfreq']
-        self.eeg_channels = eeg_epochs.ch_names
-        self.eeg_info = eeg_epochs.info
         if self.audio.ndim != 3:
             self.audio = self.audio[:, np.newaxis, :] # add channel dimension
         self.labels = np.array([1 - event % 2 for event in self._event_ids]) # 0 for up, 1 for down
         self.sub_ids = eeg_epochs.metadata['sub_id'].values
         self.features = self.eeg
+        self.sfreq = eeg_epochs.info['sfreq']
+        self.eeg_channels = eeg_epochs.ch_names
+        self.eeg_info = eeg_epochs.info
+        self.times = eeg_epochs.times
 
     def normalize(self):
         self.eeg = self.z_score_normalize(self.eeg)
