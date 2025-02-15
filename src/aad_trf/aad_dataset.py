@@ -184,18 +184,28 @@ if __name__ == '__main__':
 
     # Test the AAD_Dataset class
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config_id", type=str, default="dataset-updown-nh_exp-1", help="Configuration ID")
+    parser.add_argument("--dataset", type=str, default="updown-nh", help="dataset name")
+    parser.add_argument("--config_id_audio", type=str, default="audio-002", help="Configuration ID of audio")
+    parser.add_argument("--config_id_eeg", type=str, default="eeg-003", help="Configuration ID of eeg")
+
     args = parser.parse_args()
-    config_id = args.config_id
+    config_id_audio = args.config_id_audio
+    config_id_eeg = args.config_id_eeg
+    dataset_name = args.dataset
+    config = {'dataset': dataset_name}
 
     base_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    config = load_config(config_id)
     path_dict = set_paths_from_config(base_path, config)
 
-    audio = np.load(os.path.join(path_dict['features'], f"{config_id}_data-audio.npy"))
-    epochs = mne.read_epochs(os.path.join(path_dict['features'], f"{config_id}_data-eeg-epo.fif"))
+    config_audio = load_config(config_id_audio)
+    audio_filename = f"dataset-{dataset_name}_data-audio_config-{config_id_audio}"
+    audio = np.load(os.path.join(path_dict['features'], f"{audio_filename}.npy"))
+    config_eeg = load_config(config_id_eeg)
+    epochs_filename = f"dataset-{dataset_name}_data-eeg_config-{config_id_eeg}_-epo"
+    epochs = mne.read_epochs(os.path.join(path_dict['features'], f"{epochs_filename}.fif"))
     dataset = AAD_Dataset()
     dataset.create(epochs, audio)
+    del epochs, audio
 
     print(len(dataset))
     # generate random index
@@ -211,8 +221,11 @@ if __name__ == '__main__':
           dataset_sub.eeg_channels,
           dataset_sub.features.shape
           )
-    attended_audio = dataset.get_attended_audio()
+    attended_audio = dataset.get_audio(attended=True)
     print(attended_audio.shape)
     ax_audio = plot_audio_waveform(dataset)
     ax_eeg = plot_eeg_waveform(dataset)
+
+    dataset_filename = f"dataset-{dataset_name}_data-aad_config-test_sub-all"
+    dataset.save(os.path.join(path_dict['features'], f"{dataset_filename}.pkl"))
     pass
