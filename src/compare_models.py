@@ -16,27 +16,34 @@ def parse_clf_results(base_path, config_id:str) -> pd.DataFrame:
     file_name = f"dataset-{dataset_name}_reports-clf-results-by-trial_models-{model_name}_config-{config_id}"
     return pd.read_csv(os.path.join(path_dict['reports'], file_name + ".csv"))
 
-def plot_butterfly(epochs_correct, epochs_incorrect, ylim:dict=None, save=False):
+def plot_butterfly(epochs_correct, epochs_incorrect, 
+                   ylim:dict=dict(eeg=[-3.5, 3.5]), save=False):
     fig, axs = plt.subplots(2, 2, figsize=(12, 6))
-    if ylim == None:
-        ylim = dict(eeg=[-2.5, 2.5])
-    epochs_correct['up'].average().plot(show=False, ylim=ylim, axes=axs[0, 0])
-    epochs_correct['down'].average().plot(show=False, ylim=ylim, axes=axs[0, 1])
-    epochs_incorrect['up'].average().plot(show=False, ylim=ylim, axes=axs[1, 0])
-    epochs_incorrect['down'].average().plot(show=False, ylim=ylim, axes=axs[1, 1])
+    epochs_correct['up'].average().plot(gfp=True, show=False, ylim=ylim, axes=axs[0, 0])
+    epochs_correct['down'].average().plot(gfp=True, show=False, ylim=ylim, axes=axs[0, 1])
+    epochs_incorrect['up'].average().plot(gfp=True, show=False, ylim=ylim, axes=axs[1, 0])
+    epochs_incorrect['down'].average().plot(gfp=True, show=False, ylim=ylim, axes=axs[1, 1])
+
+    up_onsets = np.linspace(0,4,6)
+    up_onsets = up_onsets[1:-1]
+    down_onsets = np.linspace(0,4,5)
+    down_onsets = down_onsets[1:-1]
     for ax in axs.flat:
-        for up_onset in np.linspace(0,4,6):
+        for up_onset in up_onsets:
             ax.axvline(up_onset, color='r', linestyle='--')
-        for down_onset in np.linspace(0,4,5):
+        for down_onset in down_onsets:
             ax.axvline(down_onset, color='b', linestyle='--')
         ax.axvline(0, color='k', linestyle='--')
+    
     axs[0, 0].set_title('Correct Up')
     axs[0, 1].set_title('Correct Down')
     axs[1, 0].set_title('Incorrect Up')
     axs[1, 1].set_title('Incorrect Down')
     plt.tight_layout()
+    
     if save:
         plt.savefig(os.path.join(base_path, 'reports', 'updown-ci_correct_incorrect_channel-all.svg'))
+    
     return fig, axs
 
 def plot_correct_incorrect(epochs_correct, epochs_incorrect, 
