@@ -28,7 +28,7 @@ class AAD_Dataset:
         self.sfreq = sfreq
         self.eeg_channels = eeg_channels
         self.eeg_info = eeg_info
-        self.times = times
+        # self.times = times
     
     def __len__(self):
         return len(self.labels)
@@ -42,7 +42,7 @@ class AAD_Dataset:
                            self.sfreq,
                            self.eeg_channels,
                            self.eeg_info,
-                           self.times
+                        #    self.times
                            )
     
     def create(self,
@@ -60,7 +60,7 @@ class AAD_Dataset:
         self.sfreq = eeg_epochs.info['sfreq']
         self.eeg_channels = eeg_epochs.ch_names
         self.eeg_info = eeg_epochs.info
-        self.times = eeg_epochs.times
+        # self.times = eeg_epochs.times
 
     def normalize(self):
         self.eeg = self.z_score_normalize(self.eeg)
@@ -79,8 +79,8 @@ class AAD_Dataset:
         return attended_audio
     
     def get_times(self, start_time:float=0.5):
-        # return (np.arange(self.audio.shape[-1]) / self.sfreq) + start_time
-        return self.times
+        return (np.arange(self.audio.shape[-1]) / self.sfreq) + start_time
+        # return self.times
     
     def get_audio(self, 
                   attended=False,
