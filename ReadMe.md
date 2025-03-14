@@ -15,8 +15,8 @@ This module is made for auditory attention decoding (AAD) based on the temporal 
 
 ## Python Library Dependency
 
-- mne
-- seaborn
+- mne==1.7.1
+- seaborn==0.13.2
 
 Please follow the instruction from [mne documentation page](https://mne.tools/stable/install/manual_install.html#manual-install) to install the MNE-Python package.
 
