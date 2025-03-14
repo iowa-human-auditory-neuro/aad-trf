@@ -5,7 +5,7 @@ import seaborn as sns
 import mne
 from mne.viz import plot_topomap
 
-from aad_trf.aad_dataset import AAD_Dataset
+from aad_dataset import AAD_Dataset
 
 def select_channels(data:np.ndarray,
                     plot_channels:list,
@@ -33,8 +33,8 @@ def plot_audio_waveform(dataset:AAD_Dataset):
     times = dataset.get_times()
 
     fig, axs = plt.subplots(2,1,figsize=(6,6))
-    axs[0].plot(times, audio_up, color='r', label="True")
-    axs[1].plot(times, audio_down, color='b', label="True")
+    axs[0].plot(times, audio_up, color='k', label="True")
+    axs[1].plot(times, audio_down, color='k', label="True")
     plt.setp(axs, xlim=(times[0], times[-1]))
     plt.setp(axs, ylabel="Amplitude (A.U.)")
     axs[0].set_title("Up")
@@ -62,10 +62,16 @@ def plot_eeg_waveform(dataset:AAD_Dataset,
     for i, eeg_waveform, title in zip(range(2), (eeg_up, eeg_down), ("Up", "Down")):
         axs[i].plot(times, eeg_waveform, color='k', label="True")
         axs[i].axhline(0, color='k', linestyle='-')
-        for up_onset in np.linspace(0,4,6):
-            axs[i].axvline(up_onset, color='r', linestyle='--')
-        for down_onset in np.linspace(0,4,5):
-            axs[i].axvline(down_onset, color='b', linestyle='--')
+        if title == "Up":
+            for up_onset in np.linspace(0,4,6):
+                axs[i].axvline(up_onset, color='r', linestyle='--')
+            for down_onset in np.linspace(0,4,5):
+                axs[i].axvline(down_onset, color='b', linestyle=':')
+        else:
+            for up_onset in np.linspace(0,4,6):
+                axs[i].axvline(up_onset, color='r', linestyle=':')
+            for down_onset in np.linspace(0,4,5):
+                axs[i].axvline(down_onset, color='b', linestyle='--')
         axs[i].set_xlim(times[0], times[-1])
         axs[i].set_ylabel("Amplitude (uV)")
         axs[i].set_title(f"{title}")
@@ -79,14 +85,21 @@ def plot_trf_waveform(coef:np.ndarray,
                   delays:tuple,
                   dataset:AAD_Dataset,
                   plot_channels:list=None,
-                  time_step=0.1
+                  time_step=0.1,
+                  se:np.ndarray=None
                   ):
     coef = select_channels(coef, plot_channels, dataset)
     # coef = coef.squeeze()
     coef = coef.T
+    if se is not None:
+        se = select_channels(se, plot_channels, dataset)
+        se = se.T
 
     fig, ax = plt.subplots(figsize=(7,6))
     ax.plot(times, coef, color='k', marker='.')
+    if se is not None:
+        for i, channel in enumerate(plot_channels):
+            ax.fill_between(times, coef[:,i] - se[:,i], coef[:,i] + se[:,i], alpha=0.3)
     ax.axvline(0, color='k', linestyle=':')
     ax.axhline(0, color='k', linestyle='-')
     ax.set_xlim(delays)
@@ -100,10 +113,10 @@ def plot_trf_waveform(coef:np.ndarray,
     return ax
 
 def plot_trf_topo(coef:np.ndarray,
-                     times:np.ndarray,
-                     delays:tuple,
-                     eeg_info:mne.Info, 
-                     ):
+                times:np.ndarray,
+                delays:tuple,
+                eeg_info:mne.Info, 
+                ):
     delays_idx = np.arange(np.argmin(np.abs(delays[0] - times)), 
                         np.argmin(np.abs(delays[1] - times)))
     coef = np.mean(coef[:,delays_idx], axis=1)
@@ -198,8 +211,8 @@ def plot_eeg_prediction(dataset:AAD_Dataset,
     eeg_up = select_channels(eeg_up.T, plot_channels, dataset)
     eeg_down = select_channels(eeg_down.T, plot_channels, dataset)
 
-    eeg_up = eeg_up.T
-    eeg_down = eeg_down.T
+    eeg_up = eeg_up.T.squeeze()
+    eeg_down = eeg_down.T.squeeze()
     
     times = dataset.get_times()
     fig, axs = plot_eeg_waveform(dataset, plot_channels=plot_channels)

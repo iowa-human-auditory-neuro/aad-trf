@@ -9,145 +9,45 @@ from aad_dataset import AAD_Dataset
 from aad_plotter import *
 from utils import *
 
-plt.rcParams['pdf.fonttype'] = 42
-plt.rcParams['ps.fonttype'] = 42
+import matplotlib
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
+plt.rcParams['svg.fonttype'] = 'none'
+plt.rc('font', family='Helvetica')
 
-config_ids = ["trf-003", "trf-004"]
-plot_channels = ['FCz']
-time_step = 0.1
-plot_delays = (0.075, 0.125)
-plot_delay = (plot_delays[0] + plot_delays[1]) / 2
-
-coefs_nh = np.array([])
-coefs_ci = np.array([])
-eeg_info_array = []
-for config_id in config_ids:
-    config = load_config(config_id)
-    dataset_name = config['dataset']
-    base_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    path_dict = set_paths_from_config(base_path, config)
-
+def get_data_by_subject(config_id, dataset_name, path_dict):
+    """Get TRF coefficients for individual subjects and return as a dictionary"""
     files = glob.glob(f"{path_dict['models']}/dataset-{dataset_name}_models-trf_config-{config_id}_sub-*.pkl")
-    files.sort()    
-
-    scores_mean = None
-    prediction = []
-    coefs = None
+    files.sort()
+    
+    data_dict = {}
     for file in files:
         filename = os.path.basename(file).split(".")[0]
         test_sub_id = get_field_from_filename(filename, "sub")
-        print(f"Test subject: {test_sub_id}")
-
-        dataset = AAD_Dataset.load_from_file(f"{path_dict['features']}/dataset-{dataset_name}_data-aad-trfscores_config-{config_id}_sub-{test_sub_id}.pkl")
-        test_dataset = dataset[dataset.sub_ids == test_sub_id]
-
+        file_name = f"dataset-{dataset_name}_data-aad-trfscores_config-{config_id}_sub-{test_sub_id}.pkl"
+        dataset = AAD_Dataset.load_from_file(os.path.join(path_dict['features'], file_name))
+        
         trf = TRF.load(file)
         coef = trf.get_model_coef()
-        ax = plot_trf_topo(coef,
-                        times=trf.get_delays_in_sec(),
-                        delays=plot_delays,
-                        eeg_info=dataset.eeg_info
-                        )
-        plt.savefig(f"{path_dict['reports']}/dataset-{dataset_name}_reports-trf-coef-topo-{plot_delay}_config-{config_id}_sub-{test_sub_id}.svg",
-                transparent=True)
-        plt.close()
-        
-        if coefs is None:
-            coefs = coef
-        else:
-            coefs += coef
-
-        coef_selected_channel = select_channels(coef, plot_channels, dataset)
-        coef_selected_channel = coef_selected_channel.squeeze()
-
-        if config_id == "trf-004":
-            coefs_nh = np.append(coefs_nh, coef_selected_channel)
-            coefs_nh = coefs_nh.reshape(-1, len(coef_selected_channel))
-        else:
-            coefs_ci = np.append(coefs_ci, coef_selected_channel)
-            coefs_ci = coefs_ci.reshape(-1, len(coef_selected_channel))
-
+        prediction = trf.predict(dataset[dataset.sub_ids == test_sub_id])
         features = dataset.get_features()
-        features = features.reshape(features.shape[0],2,-1)
-        scores = np.zeros((features.shape[0],features.shape[2]))
-        labels = dataset.labels
-        for i, label in enumerate(labels):
+        features = features.reshape(features.shape[0], 2, -1)
+        scores = np.zeros((features.shape[0], features.shape[2]))
+        for i, label in enumerate(dataset.labels):
             scores[i,:] = features[i,label,:]
         scores = scores.mean(axis=0)
-        if scores_mean is None:
-            scores_mean = scores
-        else:
-            scores_mean += scores
-
-        prediction.append(trf.predict(test_dataset))
-        
-        # vlim = (-np.abs(scores).max(), np.abs(scores).max())
-        # ax = plot_scores_topo(scores,
-        #                  dataset.eeg_info,
-        #                  vlim=vlim
-        #                  )
+        data_dict[test_sub_id] = {
+            'coef': coef,
+            'prediction': prediction,
+            'scores': scores,
+        }
     
-    coefs /= len(files)
-    coefs = np.array(coefs)
-    ax = plot_trf_topo(coefs,
-                        times=trf.get_delays_in_sec(),
-                        delays=plot_delays,
-                        eeg_info=dataset.eeg_info
-                        )
-    plt.savefig(f"{path_dict['reports']}/dataset-{dataset_name}_reports-trf-coef-topo-{plot_delay}_config-{config_id}_sub-average.svg",
-                transparent=True)
-    
-    scores_mean /= len(files)
-    vlim = (-np.abs(scores_mean).max(), np.abs(scores_mean).max())
-    ax = plot_scores_topo(scores_mean,
-                        dataset.eeg_info,
-                        vlim=vlim
-                        )
-    plt.savefig(f"{path_dict['reports']}/dataset-{dataset_name}_reports-scores-topo_config-{config_id}_sub-average.svg",
-                transparent=True)
-    
-    prediction = np.concatenate(prediction, axis=1)
-    plot_channels = ['FCz']
-    plot_channels_str = "".join(plot_channels)
-    fig_filename = f"dataset-{dataset_name}_reports-trf-prediction_config-{config_id}_sub-grand-average_ch-{plot_channels_str}"
-    save_path = os.path.join(path_dict['reports'], f"{fig_filename}.svg")
-    if trf.direction == 'forward':
-        axs = plot_eeg_prediction(dataset,
-                                prediction,
-                                plot_channels=plot_channels,
-                                scaling_factor=1.5
-                                )
-    elif trf.direction == 'backward':
-        axs = plot_audio_prediction(dataset, prediction)
-    plt.savefig(save_path)
+    return data_dict, trf, dataset
 
-times = trf.get_delays_in_sec()
-delays = trf.delays
-
-coefs_nh_mean = coefs_nh.mean(axis=0)
-coefs_ci_mean = coefs_ci.mean(axis=0)
-coefs_nh_std = coefs_nh.std(axis=0)
-coefs_ci_std = coefs_ci.std(axis=0)
-
-fig, ax = plt.subplots(figsize=(7,6))
-ax.plot(times, coefs_nh_mean, color='k', marker='.', linestyle='-', label='NH')
-ax.fill_between(times, coefs_nh_mean-coefs_nh_std, coefs_nh_mean+coefs_nh_std, color='k', alpha=0.2)
-ax.plot(times, coefs_ci_mean, color='r', marker='.', linestyle='--', label='CI')
-ax.fill_between(times, coefs_ci_mean-coefs_ci_std, coefs_ci_mean+coefs_ci_std, color='r', alpha=0.2)
-ax.axvline(0, color='k', linestyle=':')
-ax.axhline(0, color='k', linestyle='-')
-ax.set_xlim(delays)
-ax.set_xticks(np.arange(delays[0], delays[1]+time_step, time_step))
-ax.legend()
-ax.set_title(f"TRF coefficients {plot_channels}")
-ax.set_xlabel("Time (s)")
-ax.set_ylabel("Coefficient (A.U.)")
-plt.savefig(f"{path_dict['reports']}/dataset-updown-nh-ci_reports-trf-coef-wave_config-{config_ids[0]}-{config_ids[1]}_sub-average.svg",
-            transparent=True)
-
-def plot_clf_accuracy(config_ids):
+def plot_clf_accuracy(clf_config_ids):
     all_clf_results = []
-    for config_id in config_ids:
+    for clf_config_id in clf_config_ids:
+        config_id = f"classifier-{clf_config_id:03d}"
         config = load_config(config_id)
         config_id_trf = config['config_id_trf']
         config_trf = load_config(config_id_trf)
@@ -171,13 +71,16 @@ def plot_clf_accuracy(config_ids):
     all_clf_results_df = pd.concat(all_clf_results, ignore_index=True)
     all_clf_results_df['dataset_model'] = all_clf_results_df['dataset'] + "_" + all_clf_results_df['model_name']
 
-    fig, ax = plt.subplots(figsize=(10,8))
-    ax = sns.stripplot(data=all_clf_results_df, 
+    fig, ax = plt.subplots(figsize=(6,7))
+    ax = sns.swarmplot(data=all_clf_results_df, 
                         x="dataset_model", 
                         y="accuracy_test", 
-                        jitter=0.04, 
-                        color='k',
+                        hue="test_sub_id",
+                        # jitter=0.04, 
                         marker='o',
+                        palette='icefire',
+                        # alpha=0.5,
+                        legend=False,
                         ax=ax
                         )
     ax = sns.boxplot(data=all_clf_results_df, 
@@ -189,17 +92,175 @@ def plot_clf_accuracy(config_ids):
                         # label=["NH-logistic", "NH-SVC", "CI-logistic", "CI-SVC"],
                         ax=ax
                         )
+    
+    unique_subjects = all_clf_results_df['test_sub_id'].unique()
+    for sub in unique_subjects:
+        sub_data = all_clf_results_df[all_clf_results_df['test_sub_id'] == sub]
+        ax.plot(range(len(sub_data)), sub_data['accuracy_test'], 
+                color='gray', alpha=0.5  , linewidth=0.5)
+        
     ax.axhline(0.5, color='gray', linestyle='--')
     ax.grid(axis='y')
-    ax.set_ylim(0.2, 0.8)
+    ax.set_ylim(0.4, 0.9)
     ax.set_title("Classifier performance")
     ax.set_ylabel("Accuracy")
     ax.tick_params('y', labelsize=15)
-
-    plt.savefig(os.path.join(path_dict['reports'], "all_clf_results_reref-avg.svg"),
-            transparent=True)
     
-    return all_clf_results_df
+    return ax, all_clf_results_df
 
-config_ids = ["classifier-010", "classifier-011", "classifier-006", "classifier-009"]
-all_clf_results_df = plot_clf_accuracy(config_ids)
+def plot_clf_correlations(all_clf_results_df):
+    """
+    Plot correlations between classifier accuracies with regression lines.
+    
+    Parameters:
+    -----------
+    all_clf_results_df : pandas.DataFrame
+        DataFrame containing classifier results
+    path_dict : dict
+        Dictionary containing path information
+    """
+    # Get unique dataset_model combinations
+    models = all_clf_results_df['dataset_model'].unique()
+    
+    # Create figure with subplots
+    fig, axes = plt.subplots(1, len(models), figsize=(3*len(models), 3))
+    fig.suptitle('Correlations between Classifier Accuracies', y=1.05)
+    
+    # Plot all combinations
+    plot_idx = 0
+    for i in range(len(models)):
+        for j in range(i+1, len(models)):
+            model1 = models[i]
+            model2 = models[j]
+            
+            # Get data for each model
+            data1 = all_clf_results_df[all_clf_results_df['dataset_model'] == model1]['accuracy_test']
+            data2 = all_clf_results_df[all_clf_results_df['dataset_model'] == model2]['accuracy_test']
+            
+            # Calculate correlation
+            corr = np.corrcoef(data1, data2)[0,1]
+            
+            # Create scatter plot with regression line
+            sns.regplot(x=data1, y=data2, ax=axes[plot_idx], scatter_kws={'alpha':0.5})
+            
+            # Customize plot
+            axes[plot_idx].set_xlabel(model1)
+            axes[plot_idx].set_ylabel(model2)
+            axes[plot_idx].set_xlim(0.35, 0.8)
+            axes[plot_idx].set_ylim(0.35, 0.8)
+            axes[plot_idx].plot([0.35, 0.8], [0.35, 0.8], 'k--', alpha=0.3)  # Add identity line
+            axes[plot_idx].text(0.05, 0.95, f'r = {corr:.2f}', 
+                              transform=axes[plot_idx].transAxes,
+                              verticalalignment='top')
+            
+            plot_idx += 1
+    
+    plt.tight_layout()
+    
+    return fig
+
+def main():
+    base_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    config_ids_trf = ["trf-004", "trf-006"]
+    plot_channels = ['Cz']
+    for config_id_trf in config_ids_trf:
+        config_trf = load_config(config_id_trf)
+        dataset_name = config_trf['dataset']        
+        path_dict = set_paths_from_config(base_path, config_trf)
+
+        data_dict, trf, dataset = get_data_by_subject(config_id_trf, dataset_name, path_dict)
+        coef_array = np.stack([data['coef'] for data in data_dict.values()])
+        coef_mean = coef_array.mean(axis=0)
+        coef_se = coef_array.std(axis=0) / np.sqrt(coef_array.shape[0])
+
+        fig_filename = f"dataset-{dataset_name}_reports-trf-coef-wave_config-{config_id_trf}_sub-average.pdf"
+        ax = plot_trf_waveform(coef_mean, trf.get_delays_in_sec(), trf.delays, dataset, plot_channels=plot_channels,
+                               se=coef_se)
+        plt.savefig(os.path.join(path_dict['reports'], fig_filename), transparent=True)
+        plot_delays = (0.075, 0.125) if trf.direction == 'forward' else (-0.125, -0.075)
+        ax = plot_trf_topo(coef_mean, times=trf.get_delays_in_sec(), delays=plot_delays, eeg_info=dataset.eeg_info)
+        topo_filename = f"dataset-{dataset_name}_reports-trf-coef-topo-0.1_config-{config_id_trf}_sub-average"
+        plt.savefig(os.path.join(path_dict['reports'], f"{topo_filename}.pdf"), transparent=True)
+        plt.savefig(os.path.join(path_dict['reports'], f"{topo_filename}.svg"), transparent=True)
+
+        scores_array = np.stack([data['scores'] for data in data_dict.values()])
+        scores_mean = scores_array.mean(axis=0)
+        if trf.direction == 'forward':
+            vlim = (-np.abs(scores_mean).max(), np.abs(scores_mean).max())
+            ax = plot_scores_topo(scores_mean, dataset.eeg_info, vlim=vlim)
+            save_filename = f"dataset-{dataset_name}_reports-scores-topo_config-{config_id_trf}_sub-average"
+            plt.savefig(os.path.join(path_dict['reports'], f"{save_filename}.pdf"), transparent=True)
+            plt.savefig(os.path.join(path_dict['reports'], f"{save_filename}.svg"), transparent=True)
+        else:
+            pass
+
+        prediction_list = []
+        for subj in data_dict.keys():
+            prediction = data_dict[subj]['prediction']
+            dataset_subj = dataset[dataset.sub_ids == subj]
+            prediction_up = prediction[:,dataset_subj.labels == 0,:].mean(axis=1)
+            prediction_down = prediction[:,dataset_subj.labels == 1,:].mean(axis=1)
+            if trf.direction == 'forward':
+                prediction_up = select_channels(prediction_up.T, plot_channels, dataset)
+                prediction_down = select_channels(prediction_down.T, plot_channels, dataset)
+                prediction_up = prediction_up.T.squeeze()
+                prediction_down = prediction_down.T.squeeze()
+                prediction_up *= 1.5
+                prediction_down *= 1.5
+            else:
+                prediction_up *= 30
+                prediction_down *= 30
+            prediction_list.append(np.stack([prediction_up, prediction_down]))
+        prediction_array = np.stack(prediction_list)
+        prediction_mean = prediction_array.mean(axis=0)
+        prediction_se = prediction_array.std(axis=0) / np.sqrt(prediction_array.shape[0])
+
+        times = dataset.get_times()
+        if trf.direction == 'forward':
+            fig, axs = plot_eeg_waveform(dataset, plot_channels=plot_channels)
+            axs[0].plot(times, prediction_mean[0], color='r', label="Predicted")
+            axs[0].fill_between(times, prediction_mean[0]-prediction_se[0], prediction_mean[0]+prediction_se[0], color='r', alpha=0.2)
+            axs[0].legend(loc='lower right')
+            axs[1].plot(times, prediction_mean[1], color='b', label="Predicted")
+            axs[1].fill_between(times, prediction_mean[1]-prediction_se[1], prediction_mean[1]+prediction_se[1], color='b', alpha=0.2)
+            axs[1].legend(loc='lower right')
+            plt.setp(axs, ylim=(-0.55, 0.55))
+            plt.setp(axs, ylabel="Amplitude (A.U.)")
+            fig.suptitle(f"Averaged True and Predicted EEG waveform {plot_channels}")
+        else:
+            fig, axs = plot_audio_waveform(dataset)
+            axs[0].plot(times, prediction_mean[0], color='r', label="Predicted")
+            axs[0].fill_between(times, np.squeeze(prediction_mean[0]-prediction_se[0]), np.squeeze(prediction_mean[0]+prediction_se[0]), 
+                                color='r', alpha=0.2)
+            axs[0].legend(loc='upper right')
+            axs[1].plot(times, prediction_mean[1], color='b', label="Predicted")
+            axs[1].fill_between(times, np.squeeze(prediction_mean[1]-prediction_se[1]), np.squeeze(prediction_mean[1]+prediction_se[1]), 
+                                color='b', alpha=0.2)
+            axs[1].legend(loc='upper right')
+            plt.setp(axs, ylabel="Amplitude (A.U.)")
+            fig.suptitle("Averaged True and Predicted Audio waveform")
+        save_filename = f"dataset-{dataset_name}_reports-trf-prediction_config-{config_id_trf}_sub-grand-average"
+        plt.savefig(os.path.join(path_dict['reports'], f"{save_filename}.pdf"), transparent=True)
+        plt.savefig(os.path.join(path_dict['reports'], f"{save_filename}.svg"), transparent=True)
+
+    # clf_config_ids = [10,11,14,15]
+    # path_dict = set_paths_from_config(base_path, load_config(config_ids_trf[0]))
+    # ax, all_clf_results_df = plot_clf_accuracy(clf_config_ids) # Plot classifier accuracy
+    # ax.set_xticklabels(["Logistic", "SVC", "Backward", "CNN"])
+    # plt.savefig(os.path.join(path_dict['reports'], "dataset-updown-nh_reports-clf-accuracy-combined.pdf"),
+    #     transparent=True)
+    # plt.savefig(os.path.join(path_dict['reports'], "dataset-updown-nh_reports-clf-accuracy-combined.svg"),
+    #     transparent=True)
+    # fig = plot_clf_correlations(all_clf_results_df)
+    # # Save figure
+    # plt.savefig(os.path.join(path_dict['reports'], 
+    #                         "dataset-updown-nh_reports-clf-accuracy-correlations.pdf"),
+    #             transparent=True,
+    #             bbox_inches='tight')
+    # plt.savefig(os.path.join(path_dict['reports'], 
+    #                         "dataset-updown-nh_reports-clf-accuracy-correlations.svg"),
+    #             transparent=True,
+    #             bbox_inches='tight')
+
+if __name__ == '__main__':
+    main()
