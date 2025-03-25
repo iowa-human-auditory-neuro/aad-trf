@@ -170,7 +170,7 @@ if __name__ == '__main__':
     predictions = []
     corrects = []
     model_names = []
-    clf_config_ids = [11, 14, 15]
+    clf_config_ids = [10, 10]
     config_ids_str = '-'.join([str(clf_config_id) for clf_config_id in clf_config_ids])
     for clf_config_id in clf_config_ids:
         config_id = f"classifier-{clf_config_id:03d}"
@@ -269,8 +269,10 @@ if __name__ == '__main__':
     fig1, axs1 = plot_butterfly(epochs_correct, epochs_incorrect, ylim=None)
     plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_correct_incorrect_channel-all_config-{config_ids_str}.pdf'),
             transparent=True)
-    channel = ['Cz']
-    fig2, axs2 = plot_correct_incorrect(epochs_correct, epochs_incorrect, channel=channel)
+    channel = ['C6']
+    fig2, axs2 = plot_correct_incorrect(epochs_correct, epochs_incorrect, 
+                                        channel=channel,
+                                        ylim=[-2.0e-6, 1.5e-6])
     channel_names = '-'.join(channel)
     plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_correct_incorrect_channel-{channel_names}-gfp_config-{config_ids_str}.pdf'),
                 transparent=True)
