@@ -11,6 +11,9 @@
 # Ignore files inside the reports folder
 /reports/*.csv
 /reports/*.png
+/reports/*.pdf
+/reports/*.svg
+/reports/*.npy
 
 # vscode configuration
 .vscode/
