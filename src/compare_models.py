@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import mne
+import seaborn as sns
 
 from aad_trf.utils import *
 
@@ -165,12 +166,529 @@ def plot_gfp(epochs_correct, epochs_incorrect, ylim=None):
     
     return fig, axs
 
+def _calculate_ami_single(epochs, up_onsets, down_onsets, window_size):
+    """
+    Helper function to calculate AMI for a single condition (correct or incorrect).
+    
+    Returns detailed peak information in addition to the standard AMI values.
+    """
+    # Calculate ERP values for each condition
+    up_evoked = epochs['up'].average()
+    down_evoked = epochs['down'].average()
+    
+    # Get GFP for each evoked response
+    up_gfp = np.std(up_evoked.data, axis=0)
+    down_gfp = np.std(down_evoked.data, axis=0)
+    
+    # Get times array
+    times = up_evoked.times
+    
+    # Dictionary to store detailed peak information
+    peak_info = {
+        'up': {
+            'peaks': [],
+            'times': [],
+            'indices': []
+        },
+        'down': {
+            'peaks': [],
+            'times': [],
+            'indices': []
+        },
+        'up_evoked': up_evoked,
+        'down_evoked': down_evoked,
+        'up_gfp': up_gfp,
+        'down_gfp': down_gfp,
+        'times': times
+    }
+    
+    # Lists to store peak values
+    up_peaks_attend_up = []
+    down_peaks_attend_up = []
+    up_peaks_attend_down = []
+    down_peaks_attend_down = []
+    
+    # Find peaks for "Up" onsets in both conditions
+    for onset in up_onsets:
+        # Find indices within the window after onset
+        start_time = onset + window_size[0]
+        end_time = onset + window_size[1]
+        
+        # Make sure the times are within the epoch range
+        if start_time >= times[0] and end_time <= times[-1]:
+            start_idx = np.where(times >= start_time)[0][0]
+            end_idx = np.where(times <= end_time)[0][-1]
+            
+            # Find maximum GFP in the window
+            up_max_idx = start_idx + np.argmax(up_gfp[start_idx:end_idx])
+            down_max_idx = start_idx + np.argmax(down_gfp[start_idx:end_idx])
+            
+            up_max = up_gfp[up_max_idx]
+            down_max = down_gfp[down_max_idx]
+            
+            up_peaks_attend_up.append(up_max)
+            up_peaks_attend_down.append(down_max)
+            
+            # Store detailed information
+            peak_info['up']['peaks'].append({
+                'up_peak': up_max,
+                'down_peak': down_max,
+                'up_peak_idx': up_max_idx,
+                'down_peak_idx': down_max_idx,
+                'up_peak_time': times[up_max_idx],
+                'down_peak_time': times[down_max_idx],
+                'window': (start_time, end_time),
+                'window_idx': (start_idx, end_idx)
+            })
+    
+    # Find peaks for "Down" onsets in both conditions
+    for onset in down_onsets:
+        # Find indices within the window after onset
+        start_time = onset + window_size[0]
+        end_time = onset + window_size[1]
+        
+        # Make sure the times are within the epoch range
+        if start_time >= times[0] and end_time <= times[-1]:
+            start_idx = np.where(times >= start_time)[0][0]
+            end_idx = np.where(times <= end_time)[0][-1]
+            
+            # Find maximum GFP in the window
+            up_max_idx = start_idx + np.argmax(up_gfp[start_idx:end_idx])
+            down_max_idx = start_idx + np.argmax(down_gfp[start_idx:end_idx])
+            
+            up_max = up_gfp[up_max_idx]
+            down_max = down_gfp[down_max_idx]
+            
+            down_peaks_attend_up.append(up_max)
+            down_peaks_attend_down.append(down_max)
+            
+            # Store detailed information
+            peak_info['down']['peaks'].append({
+                'up_peak': up_max,
+                'down_peak': down_max,
+                'up_peak_idx': up_max_idx,
+                'down_peak_idx': down_max_idx,
+                'up_peak_time': times[up_max_idx],
+                'down_peak_time': times[down_max_idx],
+                'window': (start_time, end_time),
+                'window_idx': (start_idx, end_idx)
+            })
+    
+    # Calculate Aa - attended condition peaks
+    # "Up" peaks for attend "Up" and "Down" peaks for attend "Down"
+    aa_up = np.mean(up_peaks_attend_up) if up_peaks_attend_up else 0
+    aa_down = np.mean(down_peaks_attend_down) if down_peaks_attend_down else 0
+    aa = (aa_up + aa_down) / 2
+    
+    # Calculate Au - unattended condition peaks
+    # "Down" peaks for attend "Up" and "Up" peaks for attend "Down"
+    au_up = np.mean(down_peaks_attend_up) if down_peaks_attend_up else 0
+    au_down = np.mean(up_peaks_attend_down) if up_peaks_attend_down else 0
+    au = (au_up + au_down) / 2
+    
+    # Calculate AMI
+    if aa + au > 0:  # Avoid division by zero
+        ami = (aa - au) / (aa + au)
+    else:
+        ami = 0
+    
+    # Store the aggregate values
+    peak_info['aa_up'] = aa_up
+    peak_info['aa_down'] = aa_down
+    peak_info['au_up'] = au_up
+    peak_info['au_down'] = au_down
+    peak_info['aa'] = aa
+    peak_info['au'] = au
+    peak_info['ami'] = ami
+    
+    return aa, au, ami, peak_info
+
+def calculate_ami(epochs_correct, epochs_incorrect, up_onsets, down_onsets, window_size=(0.05, 0.25)):
+    """
+    Calculate Attentional Modulation Index (AMI) for correct and incorrect epochs.
+    """
+    # Get unique subject IDs if available
+    has_subject_ids = hasattr(epochs_correct, 'metadata') and 'sub_id' in epochs_correct.metadata.columns
+    
+    if has_subject_ids:
+        subjects_correct = epochs_correct.metadata['sub_id'].unique()
+        subjects_incorrect = epochs_incorrect.metadata['sub_id'].unique()
+        subjects = np.unique(np.concatenate((subjects_correct, subjects_incorrect)))
+    else:
+        # If no subject info, we'll still process the whole dataset as "all"
+        subjects = ['all']
+    
+    # Initialize results dictionary
+    results = {
+        'subject': [],
+        'ami_correct': [],
+        'ami_incorrect': [],
+        'aa_correct': [],
+        'au_correct': [],
+        'aa_incorrect': [],
+        'au_incorrect': []
+    }
+    
+    # To store detailed peak info
+    peak_info = {
+        'correct': {},
+        'incorrect': {},
+        'aggregated': {} # Always include aggregated results
+    }
+    
+    # First calculate aggregated results using all data
+    print("Calculating aggregated AMI across all subjects/epochs...")
+    aa_correct_agg, au_correct_agg, ami_correct_agg, peak_info_correct_agg = _calculate_ami_single(
+        epochs_correct, up_onsets, down_onsets, window_size)
+    
+    aa_incorrect_agg, au_incorrect_agg, ami_incorrect_agg, peak_info_incorrect_agg = _calculate_ami_single(
+        epochs_incorrect, up_onsets, down_onsets, window_size)
+    
+    # Store aggregated results
+    peak_info['aggregated']['correct'] = peak_info_correct_agg
+    peak_info['aggregated']['incorrect'] = peak_info_incorrect_agg
+    
+    # Store aggregated metrics in results
+    results['subject'].append('aggregated')
+    results['ami_correct'].append(ami_correct_agg)
+    results['ami_incorrect'].append(ami_incorrect_agg)
+    results['aa_correct'].append(aa_correct_agg)
+    results['au_correct'].append(au_correct_agg)
+    results['aa_incorrect'].append(aa_incorrect_agg)
+    results['au_incorrect'].append(au_incorrect_agg)
+    
+    # Then process individual subjects if we have subject IDs
+    if has_subject_ids:
+        for subject in subjects:
+            # Select epochs for the current subject
+            query = f'sub_id == "{subject}"'
+            try:
+                epochs_correct_subj = epochs_correct[query]
+                epochs_incorrect_subj = epochs_incorrect[query]
+            except (KeyError, ValueError, NameError) as e:
+                print(f"Error selecting epochs for subject {subject}: {e}")
+                print("Available metadata columns:", epochs_correct.metadata.columns.tolist())
+                print("Skipping subject:", subject)
+                continue
+            
+            print(f"Number of epochs for {subject}: {[len(epochs_correct_subj), len(epochs_incorrect_subj)]}")
+            
+            # Calculate AMI for correct trials
+            aa_correct, au_correct, ami_correct, peak_info_correct = _calculate_ami_single(
+                epochs_correct_subj, up_onsets, down_onsets, window_size)
+            
+            # Calculate AMI for incorrect trials
+            aa_incorrect, au_incorrect, ami_incorrect, peak_info_incorrect = _calculate_ami_single(
+                epochs_incorrect_subj, up_onsets, down_onsets, window_size)
+            
+            # Store results
+            results['subject'].append(subject)
+            results['ami_correct'].append(ami_correct)
+            results['ami_incorrect'].append(ami_incorrect)
+            results['aa_correct'].append(aa_correct)
+            results['au_correct'].append(au_correct)
+            results['aa_incorrect'].append(aa_incorrect)
+            results['au_incorrect'].append(au_incorrect)
+            
+            # Store peak info
+            peak_info['correct'][subject] = peak_info_correct
+            peak_info['incorrect'][subject] = peak_info_incorrect
+    elif subjects[0] == 'all':
+        # Handle case where no subject IDs but we still want 'all' entry
+        # (Maintaining backward compatibility)
+        epochs_correct_subj = epochs_correct
+        epochs_incorrect_subj = epochs_incorrect
+        
+        # Reuse the aggregated results we already calculated
+        results['subject'].append('all')
+        results['ami_correct'].append(ami_correct_agg)
+        results['ami_incorrect'].append(ami_incorrect_agg)
+        results['aa_correct'].append(aa_correct_agg)
+        results['au_correct'].append(au_correct_agg)
+        results['aa_incorrect'].append(aa_incorrect_agg)
+        results['au_incorrect'].append(au_incorrect_agg)
+        
+        # Store the same peak info
+        peak_info['correct']['all'] = peak_info_correct_agg
+        peak_info['incorrect']['all'] = peak_info_incorrect_agg
+    
+    # Convert to DataFrame
+    results_df = pd.DataFrame(results)
+    
+    # Perform statistical comparison if there are enough subjects
+    if len(subjects) > 1 and has_subject_ids:
+        # Exclude 'aggregated' row for statistical tests
+        indiv_results = results_df[results_df['subject'] != 'aggregated']
+        
+        from scipy import stats
+        # Use Wilcoxon signed-rank test instead of t-test
+        w_stat, p_value = stats.wilcoxon(indiv_results['ami_correct'], indiv_results['ami_incorrect'])
+        print(f"Statistical comparison of AMI between correct and incorrect trials:")
+        print(f"Wilcoxon signed-rank test: W={w_stat:.4f}, p-value: {p_value:.4f}")
+        
+        # Add columns for difference and significance
+        results_df['ami_diff'] = results_df['ami_correct'] - results_df['ami_incorrect']
+        results_df['p_value'] = p_value
+    
+    return results_df, peak_info
+
+def plot_ami_peaks(ami_results, peak_info, epochs_correct, epochs_incorrect, up_onsets, down_onsets, window_size=(0.05, 0.25), ylim=None):
+    """
+    Plot GFP with highlighted regions showing which peaks are used in AMI calculation.
+    Uses pre-computed peak information to avoid redundant calculations.
+    """
+    # First create the GFP plot
+    fig, axs = plot_gfp(epochs_correct, epochs_incorrect, ylim=ylim)
+    
+    # Always use aggregated results if available, otherwise fallback to first subject
+    # or directly use the 'all' subject
+    if 'aggregated' in peak_info:
+        correct_info = peak_info['aggregated']['correct'] 
+        incorrect_info = peak_info['aggregated']['incorrect']
+    elif 'all' in peak_info['correct']:
+        # Legacy case - use 'all' if it exists
+        correct_info = peak_info['correct']['all']
+        incorrect_info = peak_info['incorrect']['all']
+    else:
+        # Last resort - use first available subject
+        correct_info = next(iter(peak_info['correct'].values()))
+        incorrect_info = next(iter(peak_info['incorrect'].values()))
+    
+    # For each condition, highlight the regions used to find peaks for AMI
+    for ax_idx, (ax, attend_cond) in enumerate(zip(axs, ['up', 'down'])):
+        # Use pre-computed peak info
+        for correctness, info in [('Correct', correct_info), ('Incorrect', incorrect_info)]:
+            # Skip visualization for incorrect trials to avoid clutter if desired
+            if correctness != 'Correct':
+                continue
+                
+            # Get the peaks for this attend condition
+            attend_peaks = info[attend_cond]['peaks']
+            
+            # Draw the peak windows and add annotations
+            for i, peak_data in enumerate(attend_peaks):
+                # Extract window information
+                start_time, end_time = peak_data['window']
+                
+                # Choose color based on stimulus type (up or down)
+                color = 'r' if attend_cond == 'up' else 'b'
+                
+                # Highlight the window
+                ax.axvspan(start_time, end_time, color=color, alpha=0.2,
+                          label=f"{attend_cond.capitalize()} peak window" if i == 0 else "")
+                
+                # Get the peak value
+                peak_value = peak_data[f'{attend_cond}_peak']
+                
+                # Mark the peak point
+                peak_time = peak_data[f'{attend_cond}_peak_time']
+                ax.plot(peak_time, peak_value, f'{color}o', markersize=4)
+                
+                # Add text annotation with peak value
+                peak_y = peak_value * 1.1  # Position above the peak
+                if peak_y > ylim[1] * 0.9:
+                    peak_y = ylim[1] * 0.85  # Adjust if too high
+                
+                ax.text(start_time + (end_time-start_time)/2, peak_y,
+                       f"{peak_value:.2e}", color=color, fontsize=7, ha='center')
+        
+        # Update legend
+        handles, labels = ax.get_legend_handles_labels()
+        unique_labels = dict(zip(labels, handles))
+        ax.legend(unique_labels.values(), unique_labels.keys(), loc='upper right')
+        
+        # Add textboxes with AMI calculations
+        for i, (correctness, info) in enumerate([('Correct', correct_info), ('Incorrect', incorrect_info)]):
+            # Calculate AMI components for attended condition
+            if attend_cond == 'up':
+                aa = info['aa_up']
+                au = info['au_up']
+            else:  # attend_cond == 'down'
+                aa = info['aa_down']
+                au = info['au_down']
+            
+            # Calculate condition-specific AMI
+            ami = (aa - au) / (aa + au) if (aa + au) > 0 else 0
+            
+            # Add textbox
+            y_pos = ylim[1] * (0.6 - 0.2 * i)  # Position based on correct/incorrect
+            bbox_props = dict(boxstyle="round,pad=0.3", fc="white", ec="gray", alpha=0.8)
+            ax.text(0.02, y_pos,
+                   f"{correctness} trials:\nAa = {aa:.2e}\nAu = {au:.2e}\nAMI = {ami:.3f}",
+                   transform=ax.transAxes, fontsize=8,
+                   verticalalignment='top', bbox=bbox_props)
+    
+    plt.tight_layout()
+    
+    return fig, axs
+
+def plot_ami_comparison(ami_results, figsize=(4, 7), swarm_kwargs=None, box_kwargs=None):
+    """
+    Create a plot comparing AMI values between correct and incorrect conditions.
+    
+    Parameters:
+    -----------
+    ami_results : pd.DataFrame
+        DataFrame containing AMI results with 'ami_correct', 'ami_incorrect', and 'subject' columns
+    figsize : tuple, optional
+        Figure size (width, height) in inches
+    swarm_kwargs : dict, optional
+        Additional keyword arguments to pass to sns.swarmplot
+    box_kwargs : dict, optional
+        Additional keyword arguments to pass to sns.boxplot
+        
+    Returns:
+    --------
+    matplotlib.axes.Axes
+        The axes object containing the plot for further customization
+    """
+    # Default kwargs
+    if swarm_kwargs is None:
+        swarm_kwargs = {}
+    if box_kwargs is None:
+        box_kwargs = {}
+    
+    # Separate individual subjects from aggregated results
+    individual_results = ami_results[~ami_results['subject'].isin(['aggregated', 'all'])]
+    aggregated_results = ami_results[ami_results['subject'].isin(['aggregated', 'all'])]
+    
+    # Create a long-form dataframe for seaborn plotting (individual subjects only)
+    ami_long = pd.DataFrame({
+        'AMI': list(individual_results['ami_correct']) + list(individual_results['ami_incorrect']),
+        'Condition': ['Correct'] * len(individual_results) + ['Incorrect'] * len(individual_results),
+        'Subject': list(individual_results['subject']) * 2
+    })
+    
+    # Create figure and plot
+    fig, ax = plt.subplots(figsize=figsize)
+    sns.set_style("whitegrid")
+    
+    # Default swarm plot settings
+    default_swarm = {
+        'x': 'Condition',
+        'y': 'AMI',
+        'data': ami_long,
+        'hue': 'Subject',
+        'marker': 'o',
+        'palette': 'deep',
+        'alpha': 0.7,
+        'legend': False
+    }
+    # Override defaults with any provided kwargs
+    default_swarm.update(swarm_kwargs)
+    
+    # Draw swarmplot only for individual subjects
+    if len(individual_results) > 0:
+        swarm = sns.swarmplot(ax=ax, **default_swarm)
+    
+    # Default box plot settings
+    default_box = {
+        'x': 'Condition',
+        'y': 'AMI',
+        'data': ami_long,
+        'width': 0.4,
+        'color': 'k',
+        'fill': False
+    }
+    # Override defaults with any provided kwargs
+    default_box.update(box_kwargs)
+    
+    # Draw boxplot on top (only for individual subjects)
+    if len(individual_results) > 0:
+        box = sns.boxplot(ax=ax, **default_box)
+    
+    # Draw zero line
+    ax.axhline(0, color='k', linestyle='-', alpha=0.3)
+    
+    # Draw lines connecting points from the same subject across conditions (individuals only)
+    if len(individual_results) > 1:  # Only if we have multiple subjects
+        # Create a dictionary mapping condition names to x-coordinates
+        condition_to_pos = {cond: i for i, cond in enumerate(['Correct', 'Incorrect'])}
+        
+        # Connect points for each subject
+        for subject in individual_results['subject'].unique():
+            # Extract this subject's data for each condition
+            subject_data = ami_long[ami_long['Subject'] == subject]
+            
+            if len(subject_data) >= 2:  # Need at least 2 points to draw a line
+                # Get the x and y coordinates for the line
+                x_coords = [condition_to_pos[cond] for cond in subject_data['Condition']]
+                y_coords = subject_data['AMI'].values
+                
+                # Draw the line connecting points
+                ax.plot(x_coords, y_coords, 'k-', alpha=0.3, linewidth=0.7, zorder=1)
+    
+    # Add aggregated results as a special marker if they exist
+    if len(aggregated_results) > 0:
+        # Get positions for correct and incorrect conditions
+        x_positions = [0, 1]  # 0 for Correct, 1 for Incorrect
+        
+        # Get the aggregated AMI values
+        agg_row = aggregated_results.iloc[0]
+        y_values = [agg_row['ami_correct'], agg_row['ami_incorrect']]
+        
+        # Plot as a star marker with a label
+        ax.plot(x_positions, y_values, 'D', color='red', markersize=10, 
+                alpha=0.8, label='Aggregated', zorder=10)
+        
+        # Connect with a thicker line
+        ax.plot(x_positions, y_values, '-', color='red', linewidth=2, 
+                alpha=0.6, zorder=9)
+    
+    # Add p-value annotation to the plot
+    if 'p_value' in ami_results.columns:
+        p_value = ami_results['p_value'].iloc[0]
+        # Determine significance level for annotation
+        if p_value < 0.001:
+            sig_text = '***'
+        elif p_value < 0.01:
+            sig_text = '**'
+        elif p_value < 0.05:
+            sig_text = '*'
+        else:
+            sig_text = f'p={p_value:.3f}'
+        
+        # Get y positions for the annotation - adjust to fit within the plot area
+        if len(ami_long) > 0:
+            y_max = ami_long['AMI'].max()
+            y_min = ami_long['AMI'].min()
+        else:
+            # If no individual subjects, use aggregated values
+            y_values = [agg_row['ami_correct'], agg_row['ami_incorrect']]
+            y_max = max(y_values)
+            y_min = min(y_values)
+        
+        y_range = y_max - y_min
+        y_pos = y_max + 0.03 * y_range
+        
+        # Apply tight_layout first to set proper axes dimensions
+        plt.tight_layout()
+        
+        # Get current axis limits
+        y_top = ax.get_ylim()[1]
+        
+        # If our calculated y_pos would be outside the visible plot area, adjust it
+        if y_pos >= y_top:
+            y_pos = y_top * 0.95
+        
+        # Add the annotation line and text
+        ax.plot([0, 0, 1, 1], [y_pos-0.01*y_range, y_pos, y_pos, y_pos-0.01*y_range], lw=1.5, c='black')
+        ax.text(0.5, y_pos + 0.01*y_range, sig_text, ha='center', va='bottom', fontsize=14)
+        
+        # Add some extra space at the top for the annotation
+        ax.set_ylim(bottom=None, top=y_pos + 0.05*y_range)
+    
+    ax.set_title('AMI Distribution by Condition')
+    plt.tight_layout()
+    
+    return ax
+
 if __name__ == '__main__':
     base_path = "/Users/jusungham/HANG/aad-trf/"
     predictions = []
     corrects = []
     model_names = []
-    clf_config_ids = [10, 10]
+    clf_config_ids = [15, 15]
     config_ids_str = '-'.join([str(clf_config_id) for clf_config_id in clf_config_ids])
     for clf_config_id in clf_config_ids:
         config_id = f"classifier-{clf_config_id:03d}"
@@ -263,16 +781,16 @@ if __name__ == '__main__':
 
     epochs_correct = dataset[correct_all_idx_sample].to_epochs()
     epochs_incorrect = dataset[incorrect_all_idx].to_epochs()
-    epochs_correct.drop_bad(reject=dict(eeg=100e-6))
-    epochs_incorrect.drop_bad(reject=dict(eeg=100e-6))
+    epochs_correct.drop_bad(reject=dict(eeg=300e-6))
+    epochs_incorrect.drop_bad(reject=dict(eeg=300e-6))
 
     fig1, axs1 = plot_butterfly(epochs_correct, epochs_incorrect, ylim=None)
     plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_correct_incorrect_channel-all_config-{config_ids_str}.pdf'),
             transparent=True)
-    channel = ['C6']
+    channel = ['Cz']
     fig2, axs2 = plot_correct_incorrect(epochs_correct, epochs_incorrect, 
                                         channel=channel,
-                                        ylim=[-2.0e-6, 1.5e-6])
+                                        ylim=[-3.0e-6, 2.0e-6])
     channel_names = '-'.join(channel)
     plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_correct_incorrect_channel-{channel_names}-gfp_config-{config_ids_str}.pdf'),
                 transparent=True)
@@ -281,3 +799,30 @@ if __name__ == '__main__':
     fig3, axs3 = plot_gfp(epochs_correct, epochs_incorrect, ylim=[0,1.8e-6])
     plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_correct_incorrect_gfp_config-{config_ids_str}.pdf'),
                     transparent=True)
+    
+    # Calculate AMI
+    print("Calculating Attentional Modulation Index (AMI)...")
+    up_onsets = np.linspace(0,4,6)
+    up_onsets = up_onsets[1:-1]
+    down_onsets = np.linspace(0,4,5)
+    down_onsets = down_onsets[1:-1]
+    ami_results, peak_info = calculate_ami(epochs_correct, epochs_incorrect, up_onsets, down_onsets)
+    
+    # Save AMI results to CSV
+    ami_csv_path = os.path.join(base_path, 'reports', f'updown-nh_ami-results_config-{config_ids_str}.csv')
+    ami_results.to_csv(ami_csv_path, index=False)
+    print(f"AMI results saved to {ami_csv_path}")
+    
+    # Plot and save the AMI comparison
+    plt.figure(figsize=(4,6))
+    ax = plot_ami_comparison(ami_results)
+    
+    # Save the seaborn plot
+    plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_ami-swarmbox_config-{config_ids_str}.svg'), transparent=True)
+    plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_ami-swarmbox_config-{config_ids_str}.pdf'), transparent=True)
+    
+    # Visualize which peaks are used in AMI calculation using the pre-computed peak info
+    fig_peaks, axs_peaks = plot_ami_peaks(ami_results, peak_info, epochs_correct, epochs_incorrect, 
+                                         up_onsets, down_onsets, ylim=[0, 1.8e-6])
+    plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_ami-peaks_config-{config_ids_str}.pdf'), transparent=True)
+    plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_ami-peaks_config-{config_ids_str}.svg'), transparent=True)
