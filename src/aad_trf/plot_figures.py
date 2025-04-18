@@ -101,7 +101,7 @@ def plot_clf_accuracy(clf_config_ids):
         
     ax.axhline(0.5, color='gray', linestyle='--')
     ax.grid(axis='y')
-    ax.set_ylim(0.4, 0.9)
+    ax.set_ylim(0.4, 1.0)
     ax.set_title("Classifier performance")
     ax.set_ylabel("Accuracy")
     ax.tick_params('y', labelsize=15)
@@ -360,6 +360,24 @@ def main():
                             "dataset-updown-nh_reports-clf-accuracy-correlations.svg"),
                 transparent=True,
                 bbox_inches='tight')
+    
+    ami = pd.read_csv(os.path.join(path_dict['reports'], "updown-nh_ami-results_config-all.csv"), index_col=False)
+    ami['dataset_model'] = "updown-nh_ami"
+    ami.rename(columns={"subject": "test_sub_id"}, inplace=True)
+    # normalize values of accuracy_test between 0.5 and 0.9
+    ami['accuracy_test'] = (ami['ami'] - ami['ami'].min()) / (ami['ami'].max() - ami['ami'].min()) * (0.9 - 0.5) + 0.5
+    all_clf_results_df = pd.concat([all_clf_results_df, ami[['test_sub_id', 'accuracy_test', 'dataset_model']]], ignore_index=True)
+    axs, corr_results_df = plot_clf_correlations(all_clf_results_df, ["Logistic", "SVC", "Backward", "CNN", "AMI"])
+    corr_results_df.to_csv(os.path.join(path_dict['reports'], "model_correlation_stats_ami.csv"), index=False)
+    plt.savefig(os.path.join(path_dict['reports'], 
+                            "dataset-updown-nh_reports-clf-accuracy-correlations-ami.pdf"),
+                transparent=True,
+                bbox_inches='tight')
+    plt.savefig(os.path.join(path_dict['reports'], 
+                            "dataset-updown-nh_reports-clf-accuracy-correlations-ami.svg"),
+                transparent=True,
+                bbox_inches='tight')
+
 
 if __name__ == '__main__':
     main()
