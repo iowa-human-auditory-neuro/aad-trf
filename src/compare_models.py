@@ -700,7 +700,7 @@ if __name__ == '__main__':
         predictions.append(prediction)
         corrects.append(correct)
     predictions = np.array(predictions)
-    corrects = np.array(corrects)
+    corrects = np.array(corrects).astype(bool)
     agreement = np.all(predictions == predictions[0], axis=0)
     agreement_rate = agreement.mean()
     print(f"agreement rate: {agreement_rate:.4f}")
@@ -826,3 +826,14 @@ if __name__ == '__main__':
                                          up_onsets, down_onsets, ylim=[0, 1.8e-6])
     plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_ami-peaks_config-{config_ids_str}.pdf'), transparent=True)
     plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_ami-peaks_config-{config_ids_str}.svg'), transparent=True)
+
+    epochs_all = dataset.to_epochs()
+    epochs_all.drop_bad(reject=dict(eeg=300e-6))
+    ami_results_all, peak_info_all = calculate_ami(epochs_all, epochs_all, up_onsets, down_onsets)
+    ami_csv_path_all = os.path.join(base_path, 'reports', f'updown-nh_ami-results_config-all.csv')
+    ami_results_all.to_csv(ami_csv_path_all, index=False)
+    print(f"AMI results for all subjects saved to {ami_csv_path_all}")
+    fig4, axs4 = plot_ami_peaks(ami_results_all, peak_info_all, epochs_all, epochs_all, 
+                                up_onsets, down_onsets, ylim=[0, 1.8e-6])
+    plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_ami-peaks_config-all.pdf'), transparent=True)
+    plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_ami-peaks_config-all.svg'), transparent=True)
