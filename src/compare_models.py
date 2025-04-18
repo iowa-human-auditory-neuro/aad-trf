@@ -688,7 +688,7 @@ if __name__ == '__main__':
     predictions = []
     corrects = []
     model_names = []
-    clf_config_ids = [15, 15]
+    clf_config_ids = [16, 16]
     config_ids_str = '-'.join([str(clf_config_id) for clf_config_id in clf_config_ids])
     for clf_config_id in clf_config_ids:
         config_id = f"classifier-{clf_config_id:03d}"

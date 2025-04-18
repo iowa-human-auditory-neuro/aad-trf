@@ -309,7 +309,7 @@ def main():
     #     plt.savefig(os.path.join(path_dict['reports'], f"{save_filename}.pdf"), transparent=True)
     #     plt.savefig(os.path.join(path_dict['reports'], f"{save_filename}.svg"), transparent=True)
 
-    clf_config_ids = [10,11,14,15]
+    clf_config_ids = [10,11,14,16]
     path_dict = set_paths_from_config(base_path, load_config(config_ids_trf[0]))
     ax, all_clf_results_df = plot_clf_accuracy(clf_config_ids) # Plot classifier accuracy
     
