@@ -4,6 +4,7 @@ import seaborn as sns
 import os
 import mne
 from sklearn.decomposition import PCA
+from matplotlib.ticker import MultipleLocator, FormatStrFormatter, NullLocator  # add NullLocator
 
 def plot_salience_map(salience_map, time, onsets, title=None, cmap='rocket'):
     """
@@ -53,19 +54,26 @@ def plot_salience_wave(salience_map, time, onsets, title=None):
     plt.xlim(time[0], time[-1])
     ylim = plt.ylim()
     # Draw vertical lines for onsets
-    for onset, line_color, cond in zip(onsets, ['magenta', 'cyan'], ['up', 'down']):
+    for onset, line_color, cond in zip(onsets, ['red', 'blue'], ['up', 'down']):
         for o in onset:
             plt.axvline(x=o, color=line_color, linestyle='--', linewidth=1)
             # add text for the condition above the plot
             plt.text(o, ylim[1]*1.01, cond, color='k', fontsize=12, ha='center', va='bottom')
-    # Set the x-ticks as time values with step of 0.5 seconds
-    plt.xticks(ticks=np.arange(0.5, 4, 0.5), rotation=0)
+
+    ax = plt.gca()
+    ax.xaxis.set_major_locator(MultipleLocator(0.5))            # major every 0.5s
+    ax.xaxis.set_minor_locator(MultipleLocator(0.1))            # minor every 0.1s
+    ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))    # label major ticks
+    ax.tick_params(axis='x', which='minor', labelbottom=False)  # hide minor labels
+    plt.minorticks_on()
+    ax.yaxis.set_minor_locator(NullLocator())
 
     if title:
         plt.title(title)
     
     plt.xlabel('Time')
     plt.ylabel('Salience')
+    plt.ylim(0, ylim[1])
     
     return plt
 
@@ -129,7 +137,7 @@ def plot_salience_topomap(salience_map, title=None, cmap='rocket_r'):
 if __name__ == "__main__":
     # Create a random salience map for demonstration
     file_dir = 'reports'
-    file_name = 'salience-map_total_down'
+    file_name = 'salience-map_total_updown'
     path = os.path.join(file_dir, f'{file_name}.npy')
     salience_map = np.load(path)
     time = np.arange(0.5, 4, 1/64)
