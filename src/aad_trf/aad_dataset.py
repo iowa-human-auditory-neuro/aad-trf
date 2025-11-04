@@ -78,6 +78,14 @@ class AAD_Dataset:
 
         return attended_audio
     
+    def _get_ignored_audio(self):
+        ignored_audio = []
+        for trial in range(len(self)):
+            ignored_audio.append(self.audio[trial, [1-self.labels[trial]],:])
+        ignored_audio = np.array(ignored_audio)
+
+        return ignored_audio
+
     def get_times(self, start_time:float=0.5):
         # return (np.arange(self.audio.shape[-1]) / self.sfreq) + start_time
         return self.times
@@ -90,7 +98,7 @@ class AAD_Dataset:
         if attended:
             audio = self._get_attended_audio()
         else:
-            audio = self.audio
+            audio = self._get_ignored_audio()
         if moveaxis:
             audio = np.moveaxis(audio, -1, 0)
         if normalize:

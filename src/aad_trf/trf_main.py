@@ -11,7 +11,7 @@ from utils import load_config, set_paths_from_config
 from aad_plotter import plot_eeg_prediction, plot_audio_prediction
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--config_id", type=str, default="trf-001", help="Configuration ID for TRF")
+parser.add_argument("--config_id", type=str, default="trf-006", help="Configuration ID for TRF")
 args = parser.parse_args()
 config_id = args.config_id
 
