@@ -5,6 +5,10 @@
 /data/updown-nh*/*
 /data/updown-ci*/*
 
+*.zip
+*._*
+*smb*
+
 # Ignore files inside the models folder
 /models/*.pkl
 
