@@ -18,6 +18,7 @@ config_id = args.config_id
 config = load_config(config_id)
 config_id_audio = config['config_id_audio']
 config_id_eeg = config['config_id_eeg']
+attended = config['attended'] if 'attended' in config else True
 
 dataset_name = config['dataset']
 base_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -52,9 +53,10 @@ for i, (train_index, test_index) in enumerate(cv.split(dataset.labels, groups=gr
             )
     trf.optimize_hyperparmeters(train_dataset, 
                                 search_space, 
-                                n_folds=config['n_folds']
+                                n_folds=config['n_folds'],
+                                attended=attended
                                 )
-    trf.train(train_dataset)
+    trf.train(train_dataset, attended=attended)
     trf_filename = f"dataset-{dataset_name}_models-trf_config-{config_id}_sub-{test_sub_id}"
     trf.save(os.path.join(path_dict['models'], f"{trf_filename}.pkl"))
     # trf = TRF.load(os.path.join(path_dict['models'], f"{trf_filename}.pkl"))
