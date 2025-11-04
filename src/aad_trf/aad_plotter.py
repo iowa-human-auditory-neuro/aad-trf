@@ -131,6 +131,7 @@ def plot_trf_topo(coef:np.ndarray,
     score_topography, _ = plot_topomap(coef, 
                                     pos=eeg_info,
                                     show=False,
+                                    cmap = 'RdBu_r',
                                     vlim=vlim,
                                     sphere=sphere,
                                     axes=ax

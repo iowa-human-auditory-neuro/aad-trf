@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import os
 import mne
 import seaborn as sns
-
+from tqdm import tqdm
 from aad_trf.utils import *
 
 import matplotlib
@@ -303,6 +303,41 @@ def _calculate_ami_single(epochs, up_onsets, down_onsets, window_size):
     
     return aa, au, ami, peak_info
 
+def bootstrap_balanced_ami(epochs_A, epochs_B, up_onsets, down_onsets,
+                           window_size=(0.05, 0.25), n_bootstraps=1000):
+    """
+    Compute bootstrapped AMI arrays for two epoch sets by trial-count balancing.
+    Returns two arrays of shape (n_bootstraps,).
+    """
+
+    idx_up_A = np.where(epochs_A.events[:, 2] == 0)[0]
+    idx_down_A = np.where(epochs_A.events[:, 2] == 1)[0]
+    idx_up_B = np.where(epochs_B.events[:, 2] == 0)[0]
+    idx_down_B = np.where(epochs_B.events[:, 2] == 1)[0]
+    n_sub_up = min(len(idx_up_A), len(idx_up_B))
+    n_sub_down = min(len(idx_down_A), len(idx_down_B))
+
+    results = []
+    for epochs , idx_up, idx_down in [(epochs_A, idx_up_A, idx_down_A), (epochs_B, idx_up_B, idx_down_B)]:
+        aa_bs = []
+        au_bs = []
+        ami_bs = []
+        for _ in tqdm(range(n_bootstraps)):
+            idx_up_sub = np.random.choice(idx_up, n_sub_up, replace=True)
+            idx_down_sub = np.random.choice(idx_down, n_sub_down, replace=True)
+            idx = np.concatenate((idx_up_sub, idx_down_sub))
+            # subset epochs
+            epochs_sub = epochs[idx]
+            # compute AMI on subsampled data (aggregated across trials)
+            aa, au, ami, peak_info = _calculate_ami_single(epochs_sub, up_onsets, down_onsets, window_size)
+            aa_bs.append(aa)
+            au_bs.append(au)
+            ami_bs.append(ami)
+    
+        results.append([np.mean(aa_bs), np.mean(au_bs), np.mean(ami_bs), peak_info])
+    
+    return results[0], results[1]
+
 def calculate_ami(epochs_correct, epochs_incorrect, up_onsets, down_onsets, window_size=(0.05, 0.25)):
     """
     Calculate Attentional Modulation Index (AMI) for correct and incorrect epochs.
@@ -338,11 +373,15 @@ def calculate_ami(epochs_correct, epochs_incorrect, up_onsets, down_onsets, wind
     
     # First calculate aggregated results using all data
     print("Calculating aggregated AMI across all subjects/epochs...")
-    aa_correct_agg, au_correct_agg, ami_correct_agg, peak_info_correct_agg = _calculate_ami_single(
-        epochs_correct, up_onsets, down_onsets, window_size)
+    # aa_correct_agg, au_correct_agg, ami_correct_agg, peak_info_correct_agg = _calculate_ami_single(
+    #     epochs_correct, up_onsets, down_onsets, window_size)
+    ami_results_correct_agg, ami_results_incorrect_agg = bootstrap_balanced_ami(
+        epochs_correct, epochs_incorrect, up_onsets, down_onsets, window_size, n_bootstraps=1000)
+    aa_correct_agg, au_correct_agg, ami_correct_agg, peak_info_correct_agg = ami_results_correct_agg
+    aa_incorrect_agg, au_incorrect_agg, ami_incorrect_agg, peak_info_incorrect_agg = ami_results_incorrect_agg
     
-    aa_incorrect_agg, au_incorrect_agg, ami_incorrect_agg, peak_info_incorrect_agg = _calculate_ami_single(
-        epochs_incorrect, up_onsets, down_onsets, window_size)
+    # aa_incorrect_agg, au_incorrect_agg, ami_incorrect_agg, peak_info_incorrect_agg = _calculate_ami_single(
+    #     epochs_incorrect, up_onsets, down_onsets, window_size)
     
     # Store aggregated results
     peak_info['aggregated']['correct'] = peak_info_correct_agg
@@ -374,12 +413,14 @@ def calculate_ami(epochs_correct, epochs_incorrect, up_onsets, down_onsets, wind
             print(f"Number of epochs for {subject}: {[len(epochs_correct_subj), len(epochs_incorrect_subj)]}")
             
             # Calculate AMI for correct trials
-            aa_correct, au_correct, ami_correct, peak_info_correct = _calculate_ami_single(
-                epochs_correct_subj, up_onsets, down_onsets, window_size)
+            ami_results_correct, ami_results_incorrect = bootstrap_balanced_ami(
+                epochs_correct_subj, epochs_incorrect_subj, up_onsets, down_onsets, window_size, n_bootstraps=1000)
+            aa_correct, au_correct, ami_correct, peak_info_correct = ami_results_correct
             
             # Calculate AMI for incorrect trials
-            aa_incorrect, au_incorrect, ami_incorrect, peak_info_incorrect = _calculate_ami_single(
-                epochs_incorrect_subj, up_onsets, down_onsets, window_size)
+            aa_incorrect, au_incorrect, ami_incorrect, peak_info_incorrect = ami_results_incorrect
+            # aa_incorrect, au_incorrect, ami_incorrect, peak_info_incorrect = _calculate_ami_single(
+            #     epochs_incorrect_subj, up_onsets, down_onsets, window_size)
             
             # Store results
             results['subject'].append(subject)
@@ -522,7 +563,7 @@ def plot_ami_peaks(ami_results, peak_info, epochs_correct, epochs_incorrect, up_
     
     return fig, axs
 
-def plot_ami_comparison(ami_results, figsize=(4, 7), swarm_kwargs=None, box_kwargs=None):
+def plot_ami_comparison(ami_results, figsize=(4, 7), swarm_kwargs=None, box_kwargs=None, ylim=None):
     """
     Create a plot comparing AMI values between correct and incorrect conditions.
     
@@ -570,6 +611,7 @@ def plot_ami_comparison(ami_results, figsize=(4, 7), swarm_kwargs=None, box_kwar
         'data': ami_long,
         'hue': 'Subject',
         'marker': 'o',
+        'size': 8,
         'palette': 'deep',
         'alpha': 0.7,
         'legend': False
@@ -678,17 +720,22 @@ def plot_ami_comparison(ami_results, figsize=(4, 7), swarm_kwargs=None, box_kwar
         # Add some extra space at the top for the annotation
         ax.set_ylim(bottom=None, top=y_pos + 0.05*y_range)
     
-    ax.set_title('AMI Distribution by Condition')
+    if ylim is not None:
+        ax.set_ylim(ylim)
+    
+    # ax.set_title('AMI Distribution by Condition')
     plt.tight_layout()
     
     return ax
+
+
 
 if __name__ == '__main__':
     base_path = "/Users/jusungham/HANG/aad-trf/"
     predictions = []
     corrects = []
     model_names = []
-    clf_config_ids = [16, 16]
+    clf_config_ids = [10,10]
     config_ids_str = '-'.join([str(clf_config_id) for clf_config_id in clf_config_ids])
     for clf_config_id in clf_config_ids:
         config_id = f"classifier-{clf_config_id:03d}"
@@ -779,26 +826,26 @@ if __name__ == '__main__':
     dataset.create(epochs, audio)
     del audio, epochs
 
-    epochs_correct = dataset[correct_all_idx_sample].to_epochs()
+    epochs_correct = dataset[correct_all_idx].to_epochs()
     epochs_incorrect = dataset[incorrect_all_idx].to_epochs()
     epochs_correct.drop_bad(reject=dict(eeg=300e-6))
     epochs_incorrect.drop_bad(reject=dict(eeg=300e-6))
 
-    fig1, axs1 = plot_butterfly(epochs_correct, epochs_incorrect, ylim=None)
-    plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_correct_incorrect_channel-all_config-{config_ids_str}.pdf'),
-            transparent=True)
-    channel = ['Cz']
-    fig2, axs2 = plot_correct_incorrect(epochs_correct, epochs_incorrect, 
-                                        channel=channel,
-                                        ylim=[-3.0e-6, 2.0e-6])
-    channel_names = '-'.join(channel)
-    plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_correct_incorrect_channel-{channel_names}-gfp_config-{config_ids_str}.pdf'),
-                transparent=True)
-    plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_correct_incorrect_channel-{channel_names}-gfp_config-{config_ids_str}.svg'),
-                transparent=True)
-    fig3, axs3 = plot_gfp(epochs_correct, epochs_incorrect, ylim=[0,1.8e-6])
-    plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_correct_incorrect_gfp_config-{config_ids_str}.pdf'),
-                    transparent=True)
+    # fig1, axs1 = plot_butterfly(epochs_correct, epochs_incorrect, ylim=None)
+    # plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_correct_incorrect_channel-all_config-{config_ids_str}.pdf'),
+    #         transparent=True)
+    # channel = ['Cz']
+    # fig2, axs2 = plot_correct_incorrect(epochs_correct, epochs_incorrect, 
+    #                                     channel=channel,
+    #                                     ylim=[-3.0e-6, 2.5e-6])
+    # channel_names = '-'.join(channel)
+    # plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_correct_incorrect_channel-{channel_names}-gfp_config-{config_ids_str}.pdf'),
+    #             transparent=True)
+    # plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_correct_incorrect_channel-{channel_names}-gfp_config-{config_ids_str}.svg'),
+    #             transparent=True)
+    # fig3, axs3 = plot_gfp(epochs_correct, epochs_incorrect, ylim=[0,1.8e-6])
+    # plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_correct_incorrect_gfp_config-{config_ids_str}.pdf'),
+    #                 transparent=True)
     
     # Calculate AMI
     print("Calculating Attentional Modulation Index (AMI)...")
@@ -815,25 +862,42 @@ if __name__ == '__main__':
     
     # Plot and save the AMI comparison
     plt.figure(figsize=(4,6))
-    ax = plot_ami_comparison(ami_results)
+    ax = plot_ami_comparison(ami_results, ylim = [-0.125, 0.125])
     
     # Save the seaborn plot
     plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_ami-swarmbox_config-{config_ids_str}.svg'), transparent=True)
     plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_ami-swarmbox_config-{config_ids_str}.pdf'), transparent=True)
     
-    # Visualize which peaks are used in AMI calculation using the pre-computed peak info
-    fig_peaks, axs_peaks = plot_ami_peaks(ami_results, peak_info, epochs_correct, epochs_incorrect, 
-                                         up_onsets, down_onsets, ylim=[0, 1.8e-6])
-    plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_ami-peaks_config-{config_ids_str}.pdf'), transparent=True)
-    plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_ami-peaks_config-{config_ids_str}.svg'), transparent=True)
+    # # Visualize which peaks are used in AMI calculation using the pre-computed peak info
+    # fig_peaks, axs_peaks = plot_ami_peaks(ami_results, peak_info, epochs_correct, epochs_incorrect, 
+    #                                      up_onsets, down_onsets, ylim=[0, 1.8e-6])
+    # plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_ami-peaks_config-{config_ids_str}.pdf'), transparent=True)
+    # plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_ami-peaks_config-{config_ids_str}.svg'), transparent=True)
 
-    epochs_all = dataset.to_epochs()
-    epochs_all.drop_bad(reject=dict(eeg=300e-6))
-    ami_results_all, peak_info_all = calculate_ami(epochs_all, epochs_all, up_onsets, down_onsets)
-    ami_csv_path_all = os.path.join(base_path, 'reports', f'updown-nh_ami-results_config-all.csv')
-    ami_results_all.to_csv(ami_csv_path_all, index=False)
-    print(f"AMI results for all subjects saved to {ami_csv_path_all}")
-    fig4, axs4 = plot_ami_peaks(ami_results_all, peak_info_all, epochs_all, epochs_all, 
-                                up_onsets, down_onsets, ylim=[0, 1.8e-6])
-    plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_ami-peaks_config-all.pdf'), transparent=True)
-    plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_ami-peaks_config-all.svg'), transparent=True)
+    # epochs_all = dataset.to_epochs()
+    # epochs_all.drop_bad(reject=dict(eeg=300e-6))
+    # ami_results_all, peak_info_all = calculate_ami(epochs_all, epochs_all, up_onsets, down_onsets)
+    # ami_csv_path_all = os.path.join(base_path, 'reports', f'updown-nh_ami-results_config-all.csv')
+    # ami_results_all.to_csv(ami_csv_path_all, index=False)
+    # print(f"AMI results for all subjects saved to {ami_csv_path_all}")
+    # fig4, axs4 = plot_ami_peaks(ami_results_all, peak_info_all, epochs_all, epochs_all, 
+    #                             up_onsets, down_onsets, ylim=[0, 1.8e-6])
+    # plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_ami-peaks_config-all.pdf'), transparent=True)
+    # plt.savefig(os.path.join(base_path, 'reports', f'updown-nh_ami-peaks_config-all.svg'), transparent=True)
+
+    # trial-count balanced bootstrap comparison
+    # ami_B_bs, _, _, _ = _calculate_ami_single(epochs_incorrect, up_onsets, down_onsets, window_size=(0.05, 0.25))
+    # ami_A_bs, ami_B_bs = bootstrap_balanced_ami(
+    #     epochs_correct, epochs_incorrect, up_onsets, down_onsets,
+    #     window_size=(0.05, 0.25), n_bootstraps=1000)
+    # diff_bs = ami_A_bs - ami_B_bs
+    # p_val = (np.abs(diff_bs) >= np.abs(diff_bs.mean())).mean()  # two-sided
+    # print(f"Bootstrap AMI diff mean={diff_bs.mean():.3f}, p≈{p_val:.3f}")
+    
+    # # Optional: inspect distribution
+    # plt.figure()
+    # plt.hist(ami_A_bs, bins='auto', alpha=0.5, label='A (balanced)')
+    # plt.hist(ami_B_bs, bins='auto', alpha=0.5, label='B (balanced)')
+    # plt.axvline(0, color='k', linestyle='--')
+    # plt.legend()
+    # plt.show()
