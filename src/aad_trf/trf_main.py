@@ -60,7 +60,7 @@ for i, (train_index, test_index) in enumerate(cv.split(dataset.labels, groups=gr
     trf_filename = f"dataset-{dataset_name}_models-trf_config-{config_id}_sub-{test_sub_id}"
     trf.save(os.path.join(path_dict['models'], f"{trf_filename}.pkl"))
     # trf = TRF.load(os.path.join(path_dict['models'], f"{trf_filename}.pkl"))
-    prediction.append(trf.predict(test_dataset))
+    prediction.append(trf.predict(test_dataset, attended=attended))
 
     dataset = trf.parse_scores_as_features(dataset)
     dataset_filename = f"dataset-{dataset_name}_data-aad-trfscores_config-{config_id}_sub-{test_sub_id}"
