@@ -91,11 +91,13 @@ class AAD_Dataset:
         return self.times
     
     def get_audio(self, 
-                  attended=False,
+                  attended=None,
                   moveaxis=False, 
                   normalize=False
                   ):
-        if attended:
+        if attended is None:
+            audio = self.audio
+        elif attended:
             audio = self._get_attended_audio()
         else:
             audio = self._get_ignored_audio()

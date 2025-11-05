@@ -29,7 +29,7 @@ class TRF:
         
         self.patterns = True if self.direction == 'backward' else False
         
-    def _get_input_output(self, dataset:AAD_Dataset, attended=True):
+    def _get_input_output(self, dataset:AAD_Dataset, attended=None):
         if self.direction == 'forward':
             input_data = dataset.get_audio(moveaxis=True, attended=attended)
             output_data = dataset.get_eeg(moveaxis=True)
@@ -133,7 +133,7 @@ class TRF:
         return self.model.predict(input_data)
     
     def parse_scores_as_features(self, dataset:AAD_Dataset):
-        input_data, output_data = self._get_input_output(dataset, attended=False)
+        input_data, output_data = self._get_input_output(dataset, attended=None)
         scores = np.zeros((len(dataset), 2, self.model.coef_.shape[0])) # (trials, up/down, channels)
         if self.direction == 'forward':
             for trial in tqdm(range(len(dataset))):
