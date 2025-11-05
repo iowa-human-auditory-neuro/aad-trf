@@ -45,7 +45,7 @@ class TRF:
                                 dataset:AAD_Dataset,
                                 search_space:list, 
                                 n_folds:int=10,
-                                attended=True,
+                                attended=None,
                                 ):
         print(f"Optimizing hyperparameter among {search_space} using {n_folds}-fold cv")
         print(f"Time delays for TRF: {self.delays}")
@@ -83,7 +83,7 @@ class TRF:
         self.lambda_ = optimization_result.mean().idxmax()
         print(f"Best lambda: {self.lambda_}")
 
-    def train(self, dataset:AAD_Dataset, attended=True):
+    def train(self, dataset:AAD_Dataset, attended=None):
         print(f"Training TRF with lambda={self.lambda_}")
         model = ReceptiveField(tmin=self.delays[0], 
                             tmax=self.delays[1], 
@@ -96,11 +96,11 @@ class TRF:
         model.fit(input_train, output_train)
 
         self.model = model
-    
-    def eval(self, dataset:AAD_Dataset):
+
+    def eval(self, dataset:AAD_Dataset, attended=None):
         print(f"Evaluating TRF on {len(dataset)} trials...")
-        input_data, output_data = self._get_input_output(dataset)
-        
+        input_data, output_data = self._get_input_output(dataset, attended=attended)
+
         scores = []
         for trial in tqdm(range(output_data.shape[1])):
             score = self.model.score(input_data[:,trial,:], output_data[:,trial,:])
@@ -128,8 +128,8 @@ class TRF:
         final_score = np.stack(scores, axis=0) # (trials, up/down, channels)
         return final_score.reshape(final_score.shape[0], -1)
     
-    def predict(self, dataset:AAD_Dataset):
-        input_data, output_data = self._get_input_output(dataset)
+    def predict(self, dataset:AAD_Dataset, attended=None):
+        input_data, output_data = self._get_input_output(dataset, attended=attended)
         return self.model.predict(input_data)
     
     def parse_scores_as_features(self, dataset:AAD_Dataset):
