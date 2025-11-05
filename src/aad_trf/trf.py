@@ -137,12 +137,12 @@ class TRF:
         scores = np.zeros((len(dataset), 2, self.model.coef_.shape[0])) # (trials, up/down, channels)
         if self.direction == 'forward':
             for trial in tqdm(range(len(dataset))):
-                scores[trial,0,:] = self.model.score(input_data[:,trial,[0]], output_data[:,trial,:])
-                scores[trial,1,:] = self.model.score(input_data[:,trial,[1]], output_data[:,trial,:])
+                scores[trial,0,:] = self.model.score(input_data[:,trial,[0]].repeat(2, axis=1), output_data[:,trial,:])
+                scores[trial,1,:] = self.model.score(input_data[:,trial,[1]].repeat(2, axis=1), output_data[:,trial,:])
         elif self.direction == 'backward':
             for trial in tqdm(range(len(dataset))):
-                scores[trial,0,:] = self.model.score(input_data[:,trial,:], output_data[:,trial,[0]])
-                scores[trial,1,:] = self.model.score(input_data[:,trial,:], output_data[:,trial,[1]])
+                scores[trial,0,:] = self.model.score(input_data[:,trial,:], output_data[:,trial,[0]].repeat(2, axis=1))
+                scores[trial,1,:] = self.model.score(input_data[:,trial,:], output_data[:,trial,[1]].repeat(2, axis=1))
         dataset.features = scores.reshape(len(dataset), -1)
         return dataset
     
