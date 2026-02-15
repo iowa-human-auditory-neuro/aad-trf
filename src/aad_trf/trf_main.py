@@ -11,7 +11,7 @@ from utils import load_config, set_paths_from_config
 from aad_plotter import plot_eeg_prediction, plot_audio_prediction
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--config_id", type=str, default="trf-007", help="Configuration ID for TRF")
+parser.add_argument("--config_id", type=str, default="trf-004", help="Configuration ID for TRF")
 args = parser.parse_args()
 config_id = args.config_id
 
@@ -51,23 +51,24 @@ for i, (train_index, test_index) in enumerate(cv.split(dataset.labels, groups=gr
             delays=tuple(config['delays']), 
             scoring=config['scoring']
             )
-    trf.optimize_hyperparmeters(train_dataset, 
-                                search_space, 
-                                n_folds=config['n_folds'],
-                                attended=attended
-                                )
+    # trf.optimize_hyperparmeters(train_dataset, 
+    #                             search_space, 
+    #                             n_folds=config['n_folds'],
+    #                             attended=attended
+    #                             )
+    # trf.lambda_ = 1e4  # Manually set hyperparameter for consistent results
     trf.train(train_dataset, attended=attended)
     trf_filename = f"dataset-{dataset_name}_models-trf_config-{config_id}_sub-{test_sub_id}"
     trf.save(os.path.join(path_dict['models'], f"{trf_filename}.pkl"))
     # trf = TRF.load(os.path.join(path_dict['models'], f"{trf_filename}.pkl"))
     prediction.append(trf.predict(test_dataset, attended=attended))
 
-    dataset = trf.parse_scores_as_features(dataset)
+    # dataset = trf.parse_scores_as_features(dataset)
     dataset_filename = f"dataset-{dataset_name}_data-aad-trfscores_config-{config_id}_sub-{test_sub_id}"
     dataset.save(os.path.join(path_dict['features'], f"{dataset_filename}.pkl"))
 
     if trf.direction == 'forward':
-        plots = ['coef-waveform', 'coef-topo', 'scores', 'hp-tuning', 'prediction']
+        plots = ['coef-waveform', 'coef-topo', 'scores']#, 'hp-tuning', 'prediction']
     else:
         plots = ['coef-waveform', 'coef-topo', 'hp-tuning', 'prediction']
 

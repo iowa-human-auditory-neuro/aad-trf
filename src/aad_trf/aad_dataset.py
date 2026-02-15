@@ -87,7 +87,7 @@ class AAD_Dataset:
         return ignored_audio
 
     def get_times(self, start_time:float=0.5):
-        return (np.arange(self.audio.shape[-1]) / self.sfreq) + start_time
+        # return (np.arange(self.audio.shape[-1]) / self.sfreq) + start_time
         return self.times
     
     def get_audio(self, 
@@ -97,6 +97,8 @@ class AAD_Dataset:
                   ):
         if attended is None:
             audio = self.audio
+        elif attended == 'mix':
+            audio = np.mean(self.audio, axis=1, keepdims=True)
         elif attended:
             audio = self._get_attended_audio()
         else:

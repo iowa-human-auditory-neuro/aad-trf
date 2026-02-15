@@ -96,7 +96,7 @@ def plot_trf_waveform(coef:np.ndarray,
         se = se.T
 
     fig, ax = plt.subplots(figsize=(7,6))
-    ax.plot(times, coef, color='k', marker='.')
+    ax.plot(times, coef, color='tab:green', marker='.', label='attended')
     if se is not None:
         for i, channel in enumerate(plot_channels):
             ax.fill_between(times, coef[:,i] - se[:,i], coef[:,i] + se[:,i], alpha=0.3)
@@ -116,18 +116,21 @@ def plot_trf_topo(coef:np.ndarray,
                 times:np.ndarray,
                 delays:tuple,
                 eeg_info:mne.Info, 
+                vlim:tuple=(),
+                axes=None
                 ):
     delays_idx = np.arange(np.argmin(np.abs(delays[0] - times)), 
                         np.argmin(np.abs(delays[1] - times)))
     coef = np.mean(coef[:,delays_idx], axis=1)
-    vlim = (-np.abs(coef).max(), np.abs(coef).max())
+    if not vlim:
+        vlim = (-np.abs(coef).max(), np.abs(coef).max())
 
     if set(['FPz', 'Oz', 'T7', 'T8']) <= set(eeg_info['ch_names']):
         sphere = 'eeglab'
     else:
         sphere = 'auto'
 
-    fig, ax = plt.subplots(figsize=(6,6))
+    fig, ax = plt.subplots(figsize=(6,6)) if axes is None else (None, axes)
     score_topography, _ = plot_topomap(coef, 
                                     pos=eeg_info,
                                     show=False,

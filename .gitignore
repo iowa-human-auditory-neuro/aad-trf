@@ -181,3 +181,4 @@ cython_debug/
 *.db
 *.pdf
 *.svg
+*.png

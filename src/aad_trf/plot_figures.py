@@ -13,6 +13,7 @@ import matplotlib
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
 plt.rcParams['svg.fonttype'] = 'none'
+plt.rcParams['font.size'] = 15
 plt.rc('font', family='Helvetica')
 
 def get_data_by_subject(config_id, dataset_name, path_dict):
@@ -43,6 +44,30 @@ def get_data_by_subject(config_id, dataset_name, path_dict):
         }
     
     return data_dict, trf, dataset
+
+def get_scores_by_subject(config_id, dataset_name, path_dict):
+    """Get TRF coefficients for individual subjects and return as a dictionary"""
+    files = glob.glob(f"{path_dict['features']}/dataset-{dataset_name}_data-aad-trfscores_config-{config_id}_sub-*.pkl")
+    files.sort()
+    
+    data_dict = {}
+    for file in files:
+        filename = os.path.basename(file).split(".")[0]
+        test_sub_id = get_field_from_filename(filename, "sub")
+        file_name = f"dataset-{dataset_name}_data-aad-trfscores_config-{config_id}_sub-{test_sub_id}.pkl"
+        dataset = AAD_Dataset.load_from_file(os.path.join(path_dict['features'], file_name))
+        
+        features = dataset.get_features()
+        features = features.reshape(features.shape[0], 2, -1)
+        scores = np.zeros((features.shape[0], features.shape[2]))
+        for i, label in enumerate(dataset.labels):
+            scores[i,:] = features[i,label,:]
+        scores = scores.mean(axis=0)
+        data_dict[test_sub_id] = {
+            'scores': scores,
+        }
+
+    return data_dict, dataset
 
 def plot_clf_accuracy(clf_config_ids):
     all_clf_results = []
@@ -131,8 +156,8 @@ def plot_clf_correlations(all_clf_results_df, model_names=None):
     models = all_clf_results_df['dataset_model'].unique()
     
     # Create figure with subplots
-    fig, axes = plt.subplots(len(models)-1, len(models)-1, figsize=(3*(len(models)-1), 3*(len(models)-1)))
-    fig.suptitle('Correlations between Classifier Accuracies')
+    fig, axes = plt.subplots(len(models)-1, len(models)-1, figsize=(2.8*(len(models)-1), 2.5*(len(models)-1)))
+    # fig.suptitle('Correlations between Classifier Accuracies')
     
     # Store correlation results
     corr_results = []
@@ -198,7 +223,7 @@ def plot_clf_correlations(all_clf_results_df, model_names=None):
                 axes[i, j-1].set_ylabel(model1)
             axes[i, j-1].set_xlim(0.45, 0.9)
             axes[i, j-1].set_ylim(0.45, 0.9)
-            axes[i, j-1].plot([0.45, 0.9], [0.45, 0.9], 'k--', alpha=0.3)  # Add identity line
+            # axes[i, j-1].plot([0.45, 0.9], [0.45, 0.9], 'k--', alpha=0.3)  # Add identity line
             
             # Add correlation and p-value annotation with significance stars based on corrected p-values
             sig_stars = ''
@@ -209,7 +234,7 @@ def plot_clf_correlations(all_clf_results_df, model_names=None):
             elif p_corrected_val < 0.05:
                 sig_stars = '*'
             
-            axes[i, j-1].text(0.05, 0.95, f'rho = {rho:.2f}{sig_stars}', 
+            axes[i, j-1].text(0.05, 0.95, rf'$\rho$ = {rho:.2f}{sig_stars}', 
                               transform=axes[i, j-1].transAxes,
                               verticalalignment='top')
     
@@ -225,32 +250,50 @@ def plot_clf_correlations(all_clf_results_df, model_names=None):
 
 def main():
     base_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    config_ids_trf = ["trf-004"]
-    plot_channels = ['FCz', 'Cz', 'C3']
+    config_ids_trf = ["trf-006"]
+    plot_channels = ['Cz']
     plot_channnels_str = "-".join(plot_channels)
-    # for config_id_trf in config_ids_trf:
-    #     config_trf = load_config(config_id_trf)
-    #     dataset_name = config_trf['dataset']        
-    #     path_dict = set_paths_from_config(base_path, config_trf)
 
-    #     data_dict, trf, dataset = get_data_by_subject(config_id_trf, dataset_name, path_dict)
-    #     coef_array = np.stack([data['coef'] for data in data_dict.values()])
-    #     coef_mean = coef_array.mean(axis=0)
-    #     coef_se = coef_array.std(axis=0) / np.sqrt(coef_array.shape[0])
+    for config_id_trf in config_ids_trf:
+        config_trf = load_config(config_id_trf)
+        dataset_name = config_trf['dataset']        
+        path_dict = set_paths_from_config(base_path, config_trf)
 
-    #     fig_filename = f"dataset-{dataset_name}_reports-trf-coef-wave_config-{config_id_trf}_channel-{plot_channnels_str}_sub-average"
-    #     ax = plot_trf_waveform(coef_mean, trf.get_delays_in_sec(), trf.delays, dataset, plot_channels=plot_channels,
-    #                            se=coef_se)
-    #     plt.savefig(os.path.join(path_dict['reports'], f'{fig_filename}.pdf'), transparent=True)
-    #     plt.savefig(os.path.join(path_dict['reports'], f'{fig_filename}.svg'), transparent=True)
-    #     plot_delays = (0.125, 0.175) if trf.direction == 'forward' else (-0.125, -0.075)
-    #     ax = plot_trf_topo(coef_mean, times=trf.get_delays_in_sec(), delays=plot_delays, eeg_info=dataset.eeg_info)
-    #     topo_filename = f"dataset-{dataset_name}_reports-trf-coef-topo-0.15_config-{config_id_trf}_sub-average"
-    #     plt.savefig(os.path.join(path_dict['reports'], f"{topo_filename}.pdf"), transparent=True)
-    #     plt.savefig(os.path.join(path_dict['reports'], f"{topo_filename}.svg"), transparent=True)
+        data_dict, trf, dataset = get_data_by_subject(config_id_trf, dataset_name, path_dict)
+        coef_array = np.stack([data['coef'] for data in data_dict.values()])
+        coef_mean = coef_array.mean(axis=0)
+        coef_se = coef_array.std(axis=0) / np.sqrt(coef_array.shape[0])
+        # np.save(os.path.join(path_dict['reports'], 
+        #                      f"dataset-{dataset_name}_reports-trf-coef-mean_config-{config_id_trf}_sub-average.npy"), 
+        #                      coef_mean)
+        # coef_mean_ign = np.load(os.path.join(path_dict['reports'], 
+        #                      f"dataset-{dataset_name}_reports-trf-coef-mean_config-trf-012_sub-average.npy"))
 
-    #     scores_array = np.stack([data['scores'] for data in data_dict.values()])
-    #     scores_mean = scores_array.mean(axis=0)
+        # fig_filename = f"dataset-{dataset_name}_reports-trf-coef-wave_config-{config_id_trf}-012_channel-{plot_channnels_str}_sub-average"
+        # ax = plot_trf_waveform(coef_mean, trf.get_delays_in_sec(), trf.delays, dataset, plot_channels=plot_channels)
+        # ax.plot(trf.get_delays_in_sec(), coef_mean_ign[47,:], marker='.', color='tab:orange', label='ignored')
+        # ax.legend()
+        # ax.set_ylabel("Coefficient (A.U.)")
+        # plt.savefig(os.path.join(path_dict['reports'], f'{fig_filename}.pdf'), transparent=True)
+        # plt.savefig(os.path.join(path_dict['reports'], f'{fig_filename}.svg'), transparent=True)
+        # plt.savefig(os.path.join(path_dict['reports'], f'{fig_filename}.png'), transparent=True, dpi=300)
+        plot_delays = (0.125, 0.175) if trf.direction == 'forward' else (-0.4, -0.0)
+        vlim = (-7.5e-8, 7.5e-8)
+        delays = [(-0.075, -0.025), (-0.125, -0.075), (-0.175, -0.125), (-0.225, -0.175), (-0.275, -0.225), (-0.325, -0.275)]
+        fig, axs = plt.subplots(1,6, figsize=(36,6))
+        for ax, delay in zip(axs, delays):
+            ax_single = plot_trf_topo(coef_mean, times=trf.get_delays_in_sec(), delays=delay, 
+                                      eeg_info=dataset.eeg_info, vlim=vlim, axes=ax)
+            ax_single.set_title(f"{-delay[1]*1e3:.0f}-{-delay[0]*1e3:.0f} ms")
+        plt.tight_layout()
+        topo_filename = f"dataset-{dataset_name}_reports-trf-coef-topo-all_config-{config_id_trf}_sub-average"
+        plt.savefig(os.path.join(path_dict['reports'], f"{topo_filename}.pdf"), transparent=True)
+        plt.savefig(os.path.join(path_dict['reports'], f"{topo_filename}.svg"), transparent=True)
+
+
+        data_dict, dataset = get_scores_by_subject(config_id_trf, dataset_name, path_dict)
+        scores_array = np.stack([data['scores'] for data in data_dict.values()])
+        scores_mean = scores_array.mean(axis=0)
     #     if trf.direction == 'forward':
     #         vlim = (-np.abs(scores_mean).max(), np.abs(scores_mean).max())
     #         ax = plot_scores_topo(scores_mean, dataset.eeg_info, vlim=vlim)
@@ -309,6 +352,7 @@ def main():
     #     plt.savefig(os.path.join(path_dict['reports'], f"{save_filename}.pdf"), transparent=True)
     #     plt.savefig(os.path.join(path_dict['reports'], f"{save_filename}.svg"), transparent=True)
 
+    #-------------------------------------------------------------------
     clf_config_ids = [10,11,14,16]
     path_dict = set_paths_from_config(base_path, load_config(config_ids_trf[0]))
     ax, all_clf_results_df = plot_clf_accuracy(clf_config_ids) # Plot classifier accuracy
@@ -342,40 +386,65 @@ def main():
 
     # Convert results to a DataFrame and save as CSV
     df_results = pd.DataFrame(results)
-    df_results.to_csv(os.path.join(path_dict['reports'], "model_comparison_stats.csv"), index=False)
+    # df_results.to_csv(os.path.join(path_dict['reports'], "model_comparison_stats.csv"), index=False)
 
-    ax.set_xticklabels(["Logistic", "SVC", "Backward", "CNN"])
-    plt.savefig(os.path.join(path_dict['reports'], "dataset-updown-nh_reports-clf-accuracy-combined.pdf"),
-        transparent=True)
-    plt.savefig(os.path.join(path_dict['reports'], "dataset-updown-nh_reports-clf-accuracy-combined.svg"),
-        transparent=True)
+    # ax.set_xticklabels(["Logistic", "SVC", "Backward", "CNN"])
+    # plt.savefig(os.path.join(path_dict['reports'], "dataset-updown-nh_reports-clf-accuracy-combined.pdf"),
+    #     transparent=True)
+    # plt.savefig(os.path.join(path_dict['reports'], "dataset-updown-nh_reports-clf-accuracy-combined.svg"),
+    #     transparent=True)
     
-    axs, corr_results_df = plot_clf_correlations(all_clf_results_df, ["Logistic", "SVC", "Backward", "CNN"])
-    corr_results_df.to_csv(os.path.join(path_dict['reports'], "model_correlation_stats.csv"), index=False)
-    plt.savefig(os.path.join(path_dict['reports'], 
-                            "dataset-updown-nh_reports-clf-accuracy-correlations.pdf"),
-                transparent=True,
-                bbox_inches='tight')
-    plt.savefig(os.path.join(path_dict['reports'], 
-                            "dataset-updown-nh_reports-clf-accuracy-correlations.svg"),
-                transparent=True,
-                bbox_inches='tight')
+    # axs, corr_results_df = plot_clf_correlations(all_clf_results_df, ["Logistic", "SVC", "Backward", "CNN"])
+    # corr_results_df.to_csv(os.path.join(path_dict['reports'], "model_correlation_stats.csv"), index=False)
+    # plt.savefig(os.path.join(path_dict['reports'], 
+    #                         "dataset-updown-nh_reports-clf-accuracy-correlations.pdf"),
+    #             transparent=True,
+    #             bbox_inches='tight')
+    # plt.savefig(os.path.join(path_dict['reports'], 
+    #                         "dataset-updown-nh_reports-clf-accuracy-correlations.svg"),
+    #             transparent=True,
+    #             bbox_inches='tight')
     
-    ami = pd.read_csv(os.path.join(path_dict['reports'], "updown-nh_ami-results_config-all.csv"), index_col=False)
+    ami = pd.read_csv(os.path.join(path_dict['reports'], "updown-nh_ami-results_config-all_n1_p2.csv"), index_col=False)
+    # drop first row
+    ami = ami.iloc[1:]
     ami['dataset_model'] = "updown-nh_ami"
     ami.rename(columns={"subject": "test_sub_id"}, inplace=True)
+    ami['accuracy_test'] = ami['ami_correct']
     # normalize values of accuracy_test between 0.5 and 0.9
-    ami['accuracy_test'] = (ami['ami'] - ami['ami'].min()) / (ami['ami'].max() - ami['ami'].min()) * (0.9 - 0.5) + 0.5
-    all_clf_results_df = pd.concat([all_clf_results_df, ami[['test_sub_id', 'accuracy_test', 'dataset_model']]], ignore_index=True)
-    axs, corr_results_df = plot_clf_correlations(all_clf_results_df, ["Logistic", "SVC", "Backward", "CNN", "AMI"])
-    corr_results_df.to_csv(os.path.join(path_dict['reports'], "model_correlation_stats_ami.csv"), index=False)
+    # ami['accuracy_test'] = (ami['ami_correct'] - ami['ami_correct'].min()) / (ami['ami_correct'].max() - ami['ami_correct'].min()) * (0.9 - 0.5) + 0.5
+    all_clf_results_df = pd.concat([ami[['test_sub_id', 'accuracy_test', 'dataset_model']], all_clf_results_df], ignore_index=True)
+    axs, corr_results_df = plot_clf_correlations(all_clf_results_df, ["AMI", "Logistic", "SVC", "Backward", "CNN"])
+    for ax in axs[0,:]: ax.set_ylim(-0.15,0.20)
+    # hide x and y labels
+    for ax in axs.flatten():
+        ax.xaxis.label.set_visible(False)
+        ax.yaxis.label.set_visible(False)
+        ax.grid(True, which='both', linestyle='--', linewidth=0.5)
+    for i in range(axs.shape[0]): 
+        axs[i,i].yaxis.label.set_visible(True)
+    for ax in axs[0,:]:
+        ax.set_title(ax.get_xlabel())
+    # hide ticks for non-diagonal plots
+    for i in range(axs.shape[0]):
+        for j in range(axs.shape[1]):
+            if i != j:
+                axs[i,j].set_xticklabels([])
+                axs[i,j].set_yticklabels([])
+    plt.tight_layout()
+    corr_results_df.to_csv(os.path.join(path_dict['reports'], "model_correlation_stats_ami-n1-p2.csv"), index=False)
     plt.savefig(os.path.join(path_dict['reports'], 
-                            "dataset-updown-nh_reports-clf-accuracy-correlations-ami.pdf"),
+                            "dataset-updown-nh_reports-clf-accuracy-correlations-ami-n1-p2.pdf"),
                 transparent=True,
                 bbox_inches='tight')
     plt.savefig(os.path.join(path_dict['reports'], 
-                            "dataset-updown-nh_reports-clf-accuracy-correlations-ami.svg"),
+                            "dataset-updown-nh_reports-clf-accuracy-correlations-ami-n1-p2.svg"),
                 transparent=True,
+                bbox_inches='tight')
+    plt.savefig(os.path.join(path_dict['reports'], 
+                            "dataset-updown-nh_reports-clf-accuracy-correlations-ami-n1-p2.png"),
+                transparent=True,
+                dpi=300,
                 bbox_inches='tight')
 
 

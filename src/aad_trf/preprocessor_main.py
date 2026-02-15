@@ -21,17 +21,17 @@ config = {'dataset': dataset_name}
 base_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 path_dict = set_paths_from_config(base_path, config)
 
-config_audio = load_config(config_id_audio)
-audio_preprocessor = AudioPreprocessor(config_audio)
-audio_array, sfreq_audio = audio_preprocessor.load_audio_data(path_dict['audio'])
-audio = audio_preprocessor.run(audio_array)
-print(audio.shape)
-axs = audio_preprocessor.plot(audio)
-audio_filename = f"dataset-{dataset_name}_data-audio_config-{config_id_audio}"
-fig_filename_audio = f"dataset-{dataset_name}_reports-prep-audio-waveform_config-{config_id_audio}"
-np.save(os.path.join(path_dict['features'], f"{audio_filename}.npy"), audio)
-plt.savefig(os.path.join(path_dict['reports'], f"{fig_filename_audio}.png"))
-plt.close()
+# config_audio = load_config(config_id_audio)
+# audio_preprocessor = AudioPreprocessor(config_audio)
+# audio_array, sfreq_audio = audio_preprocessor.load_audio_data(path_dict['audio'])
+# audio = audio_preprocessor.run(audio_array)
+# print(audio.shape)
+# axs = audio_preprocessor.plot(audio)
+# audio_filename = f"dataset-{dataset_name}_data-audio_config-{config_id_audio}"
+# fig_filename_audio = f"dataset-{dataset_name}_reports-prep-audio-waveform_config-{config_id_audio}"
+# np.save(os.path.join(path_dict['features'], f"{audio_filename}.npy"), audio)
+# plt.savefig(os.path.join(path_dict['reports'], f"{fig_filename_audio}.png"))
+# plt.close()
 
 config_eeg = load_config(config_id_eeg)
 eeg_preprocessor = EEG_Preprocessor(config_eeg)

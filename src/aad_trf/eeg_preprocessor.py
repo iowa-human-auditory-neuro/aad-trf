@@ -2,7 +2,10 @@
 import glob
 import pandas as pd
 from mne import Epochs, read_epochs, concatenate_epochs, match_channel_orders
+from mne.filter import create_filter
+from mne.viz import plot_filter
 from math import ceil
+import matplotlib.pyplot as plt
 
 from utils import get_field_from_filename
 
@@ -64,6 +67,15 @@ class EEG_Preprocessor:
             epochs = self.rereference(epochs, self.rereferencing)
         epochs = epochs.apply_baseline(baseline=self.baseline)
         if any(self.cutoff_freq):
+            filt = create_filter(
+                epochs.get_data(), 
+                sfreq=epochs.info['sfreq'],
+                l_freq=self.cutoff_freq[0],
+                h_freq=self.cutoff_freq[1]
+            )
+            plot_filter(filt, sfreq=epochs.info['sfreq'], show=False)
+            plt.savefig(f"filter_eeg_{self.cutoff_freq[0]}-{self.cutoff_freq[1]}Hz.png")
+            plt.close()
             epochs = epochs.filter(l_freq=self.cutoff_freq[0], h_freq=self.cutoff_freq[1])
         if any(self.crop_time):
             epochs = epochs.crop(tmin=self.crop_time[0], tmax=self.crop_time[1], include_tmax=False)

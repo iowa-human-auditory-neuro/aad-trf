@@ -6,7 +6,7 @@ import mne
 from sklearn.decomposition import PCA
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter, NullLocator  # add NullLocator
 
-def plot_salience_map(salience_map, time, onsets, title=None, cmap='rocket'):
+def plot_salience_map(salience_map, time, onsets, sr=64, title=None, cmap='rocket'):
     """
     Plot the salience map as a heatmap.
 
@@ -22,11 +22,11 @@ def plot_salience_map(salience_map, time, onsets, title=None, cmap='rocket'):
     # draw vertical lines for onsets
     for onset, line_color, cond in zip(onsets, ['magenta', 'cyan'], ['up', 'down']):
         for o in onset:
-            plt.axvline(x=(o-0.5)*64, color=line_color, linestyle='--', linewidth=1)
+            plt.axvline(x=(o-time[0])*sr, color=line_color, linestyle='--', linewidth=1)
             # add text for the condition above the plot
-            plt.text((o-0.5)*64, ylim[1]*1.01, cond, color='k', fontsize=12, ha='center', va='bottom')
+            plt.text((o-time[0])*sr, ylim[1]*1.01, cond, color='k', fontsize=12, ha='center', va='bottom')
     # Set the x-ticks as time values with step of 0.5 seconds
-    plt.xticks(ticks=np.arange(0, len(time), 32), labels=time[::32], rotation=0)
+    plt.xticks(ticks=np.arange(0, len(time), int(0.5*sr)), labels=time[::int(0.5*sr)], rotation=0)
     # Set the y-ticks as channel numbers of 1 to 64 with a step of 5
     plt.yticks(ticks=np.arange(0, salience_map.shape[0], 5), labels=np.arange(1, 65, 5), rotation=0)
     
@@ -83,14 +83,15 @@ def collapse_pca_weights(sal):
     Returns the first PC loadings (length n_channels).
     """
     # transpose to shape (n_t, n_ch)
-    X = sal.T
-    pca = PCA(n_components=1)
-    pca.fit(X)
+    X = sal
+    pca = PCA()
+    X_r = pca.fit_transform(X)
+    print(f'Explained variance ratios by PCA components: {pca.explained_variance_ratio_}')
     # component_[0] is the direction (length n_ch)
     # here we take absolute value or keep sign depending on interpretation
-    return pca.components_[0]
+    return X_r[:,0]
 
-def plot_salience_topomap(salience_map, title=None, cmap='rocket_r'):
+def plot_salience_topomap(salience_map, title=None, cmap='rocket_r', time=(None, None), sr=64):
     """
     Plot the salience map as a topomap.
 
@@ -100,12 +101,15 @@ def plot_salience_topomap(salience_map, title=None, cmap='rocket_r'):
     - cmap: Colormap to use for the topomap (default is 'viridis').
     - save_path: Path to save the plot (optional).
     """
+    if time is not None:
+        salience_map = salience_map[:, int((time[0]*sr)) : int((time[1]*sr))]
     salience_map_summary = [np.mean(salience_map, axis=1),
                             np.max(salience_map, axis=1),
                             np.std(salience_map, axis=1),
+                            np.var(salience_map, axis=1),
                             np.sqrt(np.mean(salience_map**2, axis=1)),
                             collapse_pca_weights(salience_map)]
-    methods = ['mean', 'max', 'std', 'rms', 'pca']
+    methods = ['mean', 'max', 'std', 'var', 'rms', 'pca']
 
     # Create a new figure
     fig, axs = plt.subplots(1,len(salience_map_summary), figsize=(3*len(salience_map_summary), 3))
@@ -137,10 +141,14 @@ def plot_salience_topomap(salience_map, title=None, cmap='rocket_r'):
 if __name__ == "__main__":
     # Create a random salience map for demonstration
     file_dir = 'reports'
-    file_name = 'salience-map_total_updown'
+    file_name = 'salience_total_test_by_stimuli'
     path = os.path.join(file_dir, f'{file_name}.npy')
+    SAMPLING_RATE = 256  # Hz
+    TMIN = -1  # seconds
+    TMAX = 5.5   # seconds
     salience_map = np.load(path)
-    time = np.arange(0.5, 4, 1/64)
+    salience_map_mean = np.mean(salience_map, axis=0)  # average over lables
+    time = np.arange(TMIN, TMAX, 1/SAMPLING_RATE)
     up_onsets = np.linspace(0,4,6)
     up_onsets = up_onsets[1:-1]
     down_onsets = np.linspace(0,4,5)
@@ -150,17 +158,18 @@ if __name__ == "__main__":
     # Plot the salience map
     save_name = f'dataset-updown-nh_{file_name}'
     save_path = os.path.join(file_dir, save_name)
-    plt_smap = plot_salience_map(salience_map, time, onsets)
-    plt_smap.savefig(f'{save_path}.svg')
+    plt_smap = plot_salience_map(salience_map_mean, time, onsets, sr=SAMPLING_RATE)
+    # plt_smap.savefig(f'{save_path}.svg')
     plt_smap.savefig(f'{save_path}.pdf')
 
-    save_path = os.path.join(file_dir, f'{save_name}_topo')
-    plt_stopo = plot_salience_topomap(salience_map, title='Salience Topography', cmap=None)
-    plt_stopo.savefig(f'{save_path}.svg')
+    topo_time = (1.5, 3.0)  # seconds
+    save_path = os.path.join(file_dir, f'{save_name}_topo_mean_{topo_time[0]}-{topo_time[1]}s')
+    plt_stopo = plot_salience_topomap(salience_map_mean, title='Salience Topography', time=topo_time, sr=SAMPLING_RATE)
+    # plt_stopo.savefig(f'{save_path}.svg')
     plt_stopo.savefig(f'{save_path}.pdf')
     # The above code will create a heatmap of the salience map and save it as 'salience_map.png'.
 
-    plt_swave = plot_salience_wave(salience_map, time, onsets)
+    plt_swave = plot_salience_wave(salience_map_mean, time, onsets)
     save_path = os.path.join(file_dir, f'{save_name}_wave')
-    plt_swave.savefig(f'{save_path}.svg')
+    # plt_swave.savefig(f'{save_path}.svg')
     plt_swave.savefig(f'{save_path}.pdf')

@@ -8,5 +8,5 @@
   "search_space": [4,4,1],
   "n_folds": 10,
   "scoring": "corrcoef",
-  "attended": null
+  "attended": false
 }
